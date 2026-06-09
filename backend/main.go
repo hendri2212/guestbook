@@ -82,12 +82,39 @@ func connectDatabase() (*gorm.DB, error) {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&models.Company{},
 		&models.AdminUser{},
 		&models.GuestForm{},
 		&models.GuestVisit{},
-	)
+	); err != nil {
+		return err
+	}
+
+	return enforceGuestVisitRequiredColumns(db)
+}
+
+func enforceGuestVisitRequiredColumns(db *gorm.DB) error {
+	backfills := []string{
+		"UPDATE guest_visits SET guest_name = '' WHERE guest_name IS NULL",
+		"UPDATE guest_visits SET guest_phone = '' WHERE guest_phone IS NULL",
+		"UPDATE guest_visits SET purpose = '' WHERE purpose IS NULL",
+	}
+
+	for _, statement := range backfills {
+		if err := db.Exec(statement).Error; err != nil {
+			return err
+		}
+	}
+
+	requiredColumns := []string{"GuestName", "GuestPhone", "Purpose"}
+	for _, column := range requiredColumns {
+		if err := db.Migrator().AlterColumn(&models.GuestVisit{}, column); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type mysqlConfig struct {

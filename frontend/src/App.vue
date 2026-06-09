@@ -75,7 +75,7 @@ async function submitGuestVisit() {
   const payload = {
     guest_name: form.guest_name.trim(),
     guest_email: optionalString(form.guest_email),
-    guest_phone: optionalString(form.guest_phone),
+    guest_phone: form.guest_phone.trim(),
     guest_company: optionalString(form.guest_company),
     purpose: form.purpose.trim(),
     person_to_meet: optionalString(form.person_to_meet),
@@ -257,7 +257,7 @@ onMounted(loadGuestForm)
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label for="guestPhone" class="form-label">Nomor Telepon</label>
+                    <label for="guestPhone" class="form-label">Nomor Telepon *</label>
                     <input
                       id="guestPhone"
                       v-model="form.guest_phone"
@@ -265,6 +265,7 @@ onMounted(loadGuestForm)
                       class="form-control"
                       placeholder="08xxxxxxxxxx"
                       maxlength="40"
+                      required
                     />
                   </div>
 

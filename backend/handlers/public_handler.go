@@ -20,7 +20,7 @@ type PublicHandler struct {
 type submitGuestVisitRequest struct {
 	GuestName    string          `json:"guest_name"`
 	GuestEmail   *string         `json:"guest_email"`
-	GuestPhone   *string         `json:"guest_phone"`
+	GuestPhone   string          `json:"guest_phone"`
 	GuestCompany *string         `json:"guest_company"`
 	Purpose      string          `json:"purpose"`
 	PersonToMeet *string         `json:"person_to_meet"`
@@ -143,9 +143,9 @@ func (handler PublicHandler) findActiveGuestForm(w http.ResponseWriter, publicSl
 
 func (request *submitGuestVisitRequest) trim() {
 	request.GuestName = strings.TrimSpace(request.GuestName)
+	request.GuestPhone = strings.TrimSpace(request.GuestPhone)
 	request.Purpose = strings.TrimSpace(request.Purpose)
 	request.GuestEmail = trimOptionalString(request.GuestEmail)
-	request.GuestPhone = trimOptionalString(request.GuestPhone)
 	request.GuestCompany = trimOptionalString(request.GuestCompany)
 	request.PersonToMeet = trimOptionalString(request.PersonToMeet)
 	request.PhotoURL = trimOptionalString(request.PhotoURL)
@@ -155,6 +155,10 @@ func (request *submitGuestVisitRequest) trim() {
 func (request submitGuestVisitRequest) validate() error {
 	if request.GuestName == "" {
 		return errors.New("guest_name is required")
+	}
+
+	if request.GuestPhone == "" {
+		return errors.New("guest_phone is required")
 	}
 
 	if request.Purpose == "" {

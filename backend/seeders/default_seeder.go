@@ -141,7 +141,7 @@ func seedGuestVisit(db *gorm.DB, companyID string, guestFormID string) error {
 		FormID:       guestFormID,
 		GuestName:    defaultGuestVisitName,
 		GuestEmail:   &guestEmail,
-		GuestPhone:   &guestPhone,
+		GuestPhone:   guestPhone,
 		GuestCompany: &guestCompany,
 		Purpose:      "Meeting administrasi",
 		PersonToMeet: &personToMeet,

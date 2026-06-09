@@ -14,7 +14,7 @@ type GuestVisit struct {
 	FormID       string         `json:"form_id" gorm:"type:char(36);not null;index"`
 	GuestName    string         `json:"guest_name" gorm:"type:varchar(140);not null"`
 	GuestEmail   *string        `json:"guest_email" gorm:"type:varchar(160)"`
-	GuestPhone   *string        `json:"guest_phone" gorm:"type:varchar(40)"`
+	GuestPhone   string         `json:"guest_phone" gorm:"type:varchar(40);not null"`
 	GuestCompany *string        `json:"guest_company" gorm:"type:varchar(160)"`
 	Purpose      string         `json:"purpose" gorm:"type:text;not null"`
 	PersonToMeet *string        `json:"person_to_meet" gorm:"type:varchar(140)"`
