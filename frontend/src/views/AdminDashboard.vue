@@ -12,6 +12,7 @@ const loadError = ref('')
 
 const user = computed(() => auth.value?.user || null)
 const company = computed(() => auth.value?.company || null)
+const canManageGuestForms = computed(() => user.value?.role === 'admin')
 const publicFormUrl = computed(() => {
   const slug = company.value?.slug ? `buku-tamu-${company.value.slug}` : 'buku-tamu-instansi-demo'
   return `/forms/${slug}`
@@ -102,7 +103,9 @@ onMounted(loadProfile)
       <nav class="nav flex-column gap-1">
         <RouterLink class="nav-link active" to="/admin">Dashboard</RouterLink>
         <a class="nav-link disabled" href="#" aria-disabled="true">Kunjungan</a>
-        <a class="nav-link disabled" href="#" aria-disabled="true">Form Public</a>
+        <RouterLink v-if="canManageGuestForms" class="nav-link" to="/admin/guest-forms">
+          Form Public
+        </RouterLink>
         <a class="nav-link disabled" href="#" aria-disabled="true">Pengaturan</a>
       </nav>
 
@@ -159,7 +162,9 @@ onMounted(loadProfile)
                 <h3 class="h5 mb-1">Kunjungan terbaru</h3>
                 <p class="text-secondary mb-0">Data contoh untuk template awal dashboard.</p>
               </div>
-              <button type="button" class="btn btn-outline-primary btn-sm">Lihat semua</button>
+              <RouterLink v-if="canManageGuestForms" class="btn btn-outline-primary btn-sm" to="/admin/guest-forms">
+                Kelola form
+              </RouterLink>
             </div>
 
             <div class="table-responsive">
@@ -330,6 +335,7 @@ onMounted(loadProfile)
 }
 
 @media (max-width: 575.98px) {
+
   .admin-content,
   .sidebar {
     padding: 18px;
