@@ -2,22 +2,28 @@ package router
 
 import (
 	"net/http"
+	"time"
 
 	"guestbook/backend/handlers"
+	"guestbook/backend/middleware"
 
 	"gorm.io/gorm"
 )
 
-func New(db *gorm.DB, mysqlPort string) http.Handler {
+func New(db *gorm.DB, mysqlPort string, jwtSecret string, tokenExpiration time.Duration) http.Handler {
 	mux := http.NewServeMux()
 
 	systemHandler := handlers.NewSystemHandler(db, mysqlPort)
 	publicHandler := handlers.NewPublicHandler(db)
+	authenticator := middleware.NewAuthenticator(jwtSecret)
+	authHandler := handlers.NewAuthHandler(db, authenticator, tokenExpiration)
 
 	mux.HandleFunc("GET /health", systemHandler.Health)
 	mux.HandleFunc("GET /migrations", systemHandler.Migrations)
 	mux.HandleFunc("GET /api/public/forms/{public_slug}", publicHandler.GetGuestForm)
 	mux.HandleFunc("POST /api/public/forms/{public_slug}/visits", publicHandler.SubmitGuestVisit)
+	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
+	mux.Handle("GET /api/admin/me", authenticator.Middleware(http.HandlerFunc(authHandler.Me)))
 
 	return withCORS(mux)
 }

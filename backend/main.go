@@ -42,7 +42,7 @@ func main() {
 
 	addr := ":" + port
 	log.Printf("guestbook backend listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, router.New(db, mysqlPort())))
+	log.Fatal(http.ListenAndServe(addr, router.New(db, mysqlPort(), jwtSecret(), tokenExpiration())))
 }
 
 func loadEnv() {
@@ -173,6 +173,14 @@ func envOrDefault(key string, fallback string) string {
 	}
 
 	return value
+}
+
+func jwtSecret() string {
+	return envOrDefault("JWT_SECRET", "dev-secret-change-me")
+}
+
+func tokenExpiration() time.Duration {
+	return 24 * time.Hour
 }
 
 func ensureDatabase(config mysqlConfig) error {
