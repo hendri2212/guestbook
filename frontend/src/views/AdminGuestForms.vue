@@ -4,14 +4,12 @@ import { RouterLink, useRouter } from 'vue-router'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 const AUTH_STORAGE_KEY = 'guestbook_admin_auth'
-const DEFAULT_FIELDS = JSON.stringify(
-  [
-    { name: 'identity_number', label: 'Nomor Identitas', type: 'text', required: false },
-    { name: 'department', label: 'Departemen Tujuan', type: 'text', required: false },
-  ],
-  null,
-  2,
-)
+const MANAGED_FIELDS = [
+  { name: 'guest_email', label: 'Email', type: 'email', stateKey: 'enable_email' },
+  { name: 'person_to_meet', label: 'Bertemu Dengan', type: 'text', stateKey: 'enable_person_to_meet' },
+  { name: 'identity_number', label: 'Nomor Identitas', type: 'text', stateKey: 'enable_identity_number' },
+  { name: 'department', label: 'Departemen Tujuan', type: 'text', stateKey: 'enable_department' },
+]
 
 const router = useRouter()
 const auth = ref(readStoredAuth())
@@ -31,7 +29,11 @@ const form = reactive({
   is_active: true,
   require_photo: false,
   require_signature: false,
-  fields: DEFAULT_FIELDS,
+  enable_email: true,
+  enable_person_to_meet: true,
+  enable_identity_number: true,
+  enable_department: true,
+  extra_fields: [],
 })
 
 const user = computed(() => auth.value?.user || null)
@@ -76,11 +78,18 @@ function resetForm() {
     is_active: true,
     require_photo: false,
     require_signature: false,
-    fields: DEFAULT_FIELDS,
+    enable_email: true,
+    enable_person_to_meet: true,
+    enable_identity_number: true,
+    enable_department: true,
+    extra_fields: [],
   })
 }
 
 function editGuestForm(guestForm) {
+  const fields = normalizeFields(guestForm.fields)
+  const fieldState = fieldStateFromFields(fields)
+
   editingID.value = guestForm.id
   Object.assign(form, {
     name: guestForm.name || '',
@@ -90,7 +99,8 @@ function editGuestForm(guestForm) {
     is_active: Boolean(guestForm.is_active),
     require_photo: Boolean(guestForm.require_photo),
     require_signature: Boolean(guestForm.require_signature),
-    fields: JSON.stringify(guestForm.fields || [], null, 2),
+    ...fieldState,
+    extra_fields: fields.filter((field) => !MANAGED_FIELDS.some((managed) => managed.name === field.name)),
   })
   successMessage.value = ''
   pageError.value = ''
@@ -100,12 +110,41 @@ function publicFormPath(publicSlug) {
   return `/forms/${publicSlug}`
 }
 
-function parseFields() {
-  const parsed = JSON.parse(form.fields || '[]')
-  if (!Array.isArray(parsed)) {
-    throw new Error('Fields harus berupa JSON array.')
+function normalizeFields(rawFields) {
+  if (Array.isArray(rawFields)) {
+    return rawFields
   }
-  return parsed
+
+  if (typeof rawFields === 'string' && rawFields.trim() !== '') {
+    try {
+      const parsed = JSON.parse(rawFields)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
+function fieldStateFromFields(fields) {
+  return MANAGED_FIELDS.reduce((state, fieldDefinition) => {
+    const existingField = fields.find((field) => field.name === fieldDefinition.name)
+    state[fieldDefinition.stateKey] = existingField?.enabled !== false
+    return state
+  }, {})
+}
+
+function buildFields() {
+  const managedFields = MANAGED_FIELDS.map((fieldDefinition) => ({
+    name: fieldDefinition.name,
+    label: fieldDefinition.label,
+    type: fieldDefinition.type,
+    required: false,
+    enabled: Boolean(form[fieldDefinition.stateKey]),
+  }))
+
+  return [...managedFields, ...form.extra_fields]
 }
 
 async function loadGuestForms() {
@@ -152,7 +191,6 @@ async function saveGuestForm() {
   isSaving.value = true
 
   try {
-    const fields = parseFields()
     const payload = {
       name: form.name.trim() || null,
       public_slug: form.public_slug.trim(),
@@ -161,7 +199,7 @@ async function saveGuestForm() {
       is_active: form.is_active,
       require_photo: form.require_photo,
       require_signature: form.require_signature,
-      fields,
+      fields: buildFields(),
     }
 
     const response = await fetch(isEditing.value ? `${endpoint.value}/${editingID.value}` : endpoint.value, {
@@ -404,23 +442,73 @@ onMounted(loadGuestForms)
               </div>
 
               <div class="col-12">
-                <div class="option-grid">
-                  <div class="form-check form-switch">
-                    <input id="isActive" v-model="form.is_active" class="form-check-input" type="checkbox" />
-                    <label class="form-check-label" for="isActive">Aktif</label>
+                <div class="field-settings">
+                  <div class="mb-3">
+                    <h4 class="h6 mb-1">Field yang ditampilkan</h4>
+                    <p class="text-secondary mb-0">Pilih data tambahan yang perlu diisi oleh tamu.</p>
                   </div>
-                  <div class="form-check form-switch">
-                    <input id="requirePhoto" v-model="form.require_photo" class="form-check-input" type="checkbox" />
-                    <label class="form-check-label" for="requirePhoto">Wajib foto</label>
+
+                  <div class="option-grid">
+                    <div class="form-check form-switch">
+                      <input id="enableEmail" v-model="form.enable_email" class="form-check-input" type="checkbox" />
+                      <label class="form-check-label" for="enableEmail">Email</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input
+                        id="enablePersonToMeet"
+                        v-model="form.enable_person_to_meet"
+                        class="form-check-input"
+                        type="checkbox"
+                      />
+                      <label class="form-check-label" for="enablePersonToMeet">Bertemu Dengan</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input
+                        id="enableIdentityNumber"
+                        v-model="form.enable_identity_number"
+                        class="form-check-input"
+                        type="checkbox"
+                      />
+                      <label class="form-check-label" for="enableIdentityNumber">Nomor Identitas</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input
+                        id="enableDepartment"
+                        v-model="form.enable_department"
+                        class="form-check-input"
+                        type="checkbox"
+                      />
+                      <label class="form-check-label" for="enableDepartment">Departemen Tujuan</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input id="requirePhoto" v-model="form.require_photo" class="form-check-input" type="checkbox" />
+                      <label class="form-check-label" for="requirePhoto">Wajib foto</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input
+                        id="requireSignature"
+                        v-model="form.require_signature"
+                        class="form-check-input"
+                        type="checkbox"
+                      />
+                      <label class="form-check-label" for="requireSignature">Wajib tanda tangan</label>
+                    </div>
                   </div>
-                  <div class="form-check form-switch">
-                    <input
-                      id="requireSignature"
-                      v-model="form.require_signature"
-                      class="form-check-input"
-                      type="checkbox"
-                    />
-                    <label class="form-check-label" for="requireSignature">Wajib tanda tangan</label>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="field-settings">
+                  <div class="mb-3">
+                    <h4 class="h6 mb-1">Status form</h4>
+                    <p class="text-secondary mb-0">Nonaktifkan jika form belum siap digunakan oleh tamu.</p>
+                  </div>
+
+                  <div class="option-grid">
+                    <div class="form-check form-switch">
+                      <input id="isActive" v-model="form.is_active" class="form-check-input" type="checkbox" />
+                      <label class="form-check-label" for="isActive">Aktif</label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -556,6 +644,13 @@ onMounted(loadGuestForms)
 .form-check-input:focus {
   border-color: #86b7fe;
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.12);
+}
+
+.field-settings {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 16px;
 }
 
 .option-grid {

@@ -25,6 +25,8 @@ const form = reactive({
   person_to_meet: '',
   identity_number: '',
   department: '',
+  photo_url: '',
+  signature_url: '',
 })
 
 const isSubmitting = ref(false)
@@ -43,10 +45,49 @@ const endpoint = computed(
 )
 
 const canShowForm = computed(() => Boolean(hasPublicSlug.value && guestForm.value && !formLoadError.value))
+const configuredFields = computed(() => normalizeFields(guestForm.value?.fields))
+const fieldConfigByName = computed(() => {
+  return configuredFields.value.reduce((config, field) => {
+    if (field?.name) {
+      config[field.name] = field
+    }
+    return config
+  }, {})
+})
+const enabledFields = computed(() => ({
+  email: isFieldEnabled('guest_email'),
+  personToMeet: isFieldEnabled('person_to_meet'),
+  identityNumber: isFieldEnabled('identity_number'),
+  department: isFieldEnabled('department'),
+}))
+const requirePhoto = computed(() => Boolean(guestForm.value?.require_photo))
+const requireSignature = computed(() => Boolean(guestForm.value?.require_signature))
 
 function optionalString(value) {
   const trimmed = value.trim()
   return trimmed === '' ? null : trimmed
+}
+
+function normalizeFields(rawFields) {
+  if (Array.isArray(rawFields)) {
+    return rawFields
+  }
+
+  if (typeof rawFields === 'string' && rawFields.trim() !== '') {
+    try {
+      const parsed = JSON.parse(rawFields)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
+function isFieldEnabled(name) {
+  const field = fieldConfigByName.value[name]
+  return field?.enabled !== false
 }
 
 function resetForm() {
@@ -59,6 +100,8 @@ function resetForm() {
     person_to_meet: '',
     identity_number: '',
     department: '',
+    photo_url: '',
+    signature_url: '',
   })
 }
 
@@ -74,14 +117,16 @@ async function submitGuestVisit() {
 
   const payload = {
     guest_name: form.guest_name.trim(),
-    guest_email: optionalString(form.guest_email),
+    guest_email: enabledFields.value.email ? optionalString(form.guest_email) : null,
     guest_phone: form.guest_phone.trim(),
     guest_company: optionalString(form.guest_company),
     purpose: form.purpose.trim(),
-    person_to_meet: optionalString(form.person_to_meet),
+    person_to_meet: enabledFields.value.personToMeet ? optionalString(form.person_to_meet) : null,
+    photo_url: requirePhoto.value ? optionalString(form.photo_url) : null,
+    signature_url: requireSignature.value ? optionalString(form.signature_url) : null,
     metadata: {
-      identity_number: optionalString(form.identity_number),
-      department: optionalString(form.department),
+      identity_number: enabledFields.value.identityNumber ? optionalString(form.identity_number) : null,
+      department: enabledFields.value.department ? optionalString(form.department) : null,
     },
   }
 
@@ -237,7 +282,7 @@ onMounted(loadGuestForm)
                       placeholder="Masukkan nama lengkap" maxlength="140" required />
                   </div>
 
-                  <div class="col-12 col-md-6">
+                  <div v-if="enabledFields.email" class="col-12 col-md-6">
                     <label for="guestEmail" class="form-label">Email</label>
                     <input id="guestEmail" v-model="form.guest_email" type="email" class="form-control"
                       placeholder="nama@email.com" maxlength="160" />
@@ -250,27 +295,39 @@ onMounted(loadGuestForm)
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label for="guestCompany" class="form-label">Instansi / Perusahaan</label>
+                    <label for="guestCompany" class="form-label">Asal Instansi / Perusahaan</label>
                     <input id="guestCompany" v-model="form.guest_company" type="text" class="form-control"
                       placeholder="Nama instansi" maxlength="160" />
                   </div>
 
-                  <div class="col-12 col-md-6">
+                  <div v-if="enabledFields.personToMeet" class="col-12 col-md-6">
                     <label for="personToMeet" class="form-label">Bertemu Dengan</label>
                     <input id="personToMeet" v-model="form.person_to_meet" type="text" class="form-control"
                       placeholder="Nama penerima" maxlength="140" />
                   </div>
 
-                  <div class="col-12 col-md-6">
+                  <div v-if="enabledFields.identityNumber" class="col-12 col-md-6">
                     <label for="identityNumber" class="form-label">Nomor Identitas</label>
                     <input id="identityNumber" v-model="form.identity_number" type="text" class="form-control"
                       placeholder="KTP/SIM/Paspor" />
                   </div>
 
-                  <div class="col-12 col-md-6">
+                  <div v-if="enabledFields.department" class="col-12 col-md-6">
                     <label for="department" class="form-label">Departemen Tujuan</label>
                     <input id="department" v-model="form.department" type="text" class="form-control"
                       placeholder="Contoh: Administrasi" />
+                  </div>
+
+                  <div v-if="requirePhoto" class="col-12 col-md-6">
+                    <label for="photoUrl" class="form-label">Foto Tamu *</label>
+                    <input id="photoUrl" v-model="form.photo_url" type="url" class="form-control"
+                      placeholder="https://contoh.com/foto.jpg" required />
+                  </div>
+
+                  <div v-if="requireSignature" class="col-12 col-md-6">
+                    <label for="signatureUrl" class="form-label">Tanda Tangan *</label>
+                    <input id="signatureUrl" v-model="form.signature_url" type="url" class="form-control"
+                      placeholder="https://contoh.com/signature.png" required />
                   </div>
 
                   <div class="col-12">

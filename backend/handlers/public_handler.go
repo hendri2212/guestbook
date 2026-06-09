@@ -36,12 +36,14 @@ type submitGuestVisitResponse struct {
 }
 
 type publicGuestFormResponse struct {
-	ID          string         `json:"id"`
-	PublicSlug  string         `json:"public_slug"`
-	Title       string         `json:"title"`
-	Description *string        `json:"description"`
-	Fields      datatypes.JSON `json:"fields"`
-	Company     string         `json:"company"`
+	ID               string         `json:"id"`
+	PublicSlug       string         `json:"public_slug"`
+	Title            string         `json:"title"`
+	Description      *string        `json:"description"`
+	RequirePhoto     bool           `json:"require_photo"`
+	RequireSignature bool           `json:"require_signature"`
+	Fields           datatypes.JSON `json:"fields"`
+	Company          string         `json:"company"`
 }
 
 func NewPublicHandler(db *gorm.DB) PublicHandler {
@@ -55,12 +57,14 @@ func (handler PublicHandler) GetGuestForm(w http.ResponseWriter, r *http.Request
 	}
 
 	writeJSON(w, http.StatusOK, publicGuestFormResponse{
-		ID:          guestForm.ID,
-		PublicSlug:  guestForm.PublicSlug,
-		Title:       guestForm.Title,
-		Description: guestForm.Description,
-		Fields:      guestForm.Fields,
-		Company:     guestForm.Company.Name,
+		ID:               guestForm.ID,
+		PublicSlug:       guestForm.PublicSlug,
+		Title:            guestForm.Title,
+		Description:      guestForm.Description,
+		RequirePhoto:     guestForm.RequirePhoto,
+		RequireSignature: guestForm.RequireSignature,
+		Fields:           guestForm.Fields,
+		Company:          guestForm.Company.Name,
 	})
 }
 
