@@ -57,6 +57,15 @@ defineEmits(['logout'])
           <i class="bi bi-person-gear"></i>
           Management User
         </RouterLink>
+        <RouterLink
+          v-if="user?.role === 'owner'"
+          class="nav-link"
+          :class="{ active: activeMenu === 'companies' }"
+          to="/admin/companies"
+        >
+          <i class="bi bi-buildings"></i>
+          Management Company
+        </RouterLink>
         <RouterLink class="nav-link" :class="{ active: activeMenu === 'settings' }" to="/admin/settings">
           <i class="bi bi-gear"></i>
           Pengaturan

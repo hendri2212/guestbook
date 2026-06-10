@@ -55,14 +55,23 @@ func (handler AdminCompanyHandler) List(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	company, ok := handler.findCompany(w, claims.CompanyID)
-	if !ok {
+	query := handler.db.Model(&models.Company{})
+	if claims.Role != "owner" {
+		query = query.Where("id = ?", claims.CompanyID)
+	}
+
+	var companies []models.Company
+	if err := query.Order("created_at DESC").Find(&companies).Error; err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load companies")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, []companyResponse{
-		handler.newCompanyResponse(company),
-	})
+	responses := make([]companyResponse, 0, len(companies))
+	for _, company := range companies {
+		responses = append(responses, handler.newCompanyResponse(company))
+	}
+
+	writeJSON(w, http.StatusOK, responses)
 }
 
 func (handler AdminCompanyHandler) Detail(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +81,7 @@ func (handler AdminCompanyHandler) Detail(w http.ResponseWriter, r *http.Request
 	}
 
 	companyID := r.PathValue("id")
-	if companyID != claims.CompanyID {
+	if claims.Role != "owner" && companyID != claims.CompanyID {
 		writeError(w, http.StatusNotFound, "company not found")
 		return
 	}
@@ -85,6 +94,48 @@ func (handler AdminCompanyHandler) Detail(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, handler.newCompanyResponse(company))
 }
 
+func (handler AdminCompanyHandler) Create(w http.ResponseWriter, r *http.Request) {
+	claims, ok := authClaims(w, r)
+	if !ok {
+		return
+	}
+	if !requireOwner(w, claims) {
+		return
+	}
+
+	var request companyRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json payload")
+		return
+	}
+
+	request.trim()
+	if err := request.validateCreate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if handler.slugExists(*request.Slug, "") {
+		writeError(w, http.StatusConflict, "slug already exists")
+		return
+	}
+
+	company := models.Company{
+		Name:     *request.Name,
+		Slug:     *request.Slug,
+		Email:    trimOptionalString(request.Email),
+		Phone:    trimOptionalString(request.Phone),
+		Address:  trimOptionalString(request.Address),
+		IsActive: boolOrDefault(request.IsActive, true),
+	}
+
+	if err := handler.db.Create(&company).Error; err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create company")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, handler.newCompanyResponse(company))
+}
+
 func (handler AdminCompanyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	claims, ok := authClaims(w, r)
 	if !ok {
@@ -95,7 +146,7 @@ func (handler AdminCompanyHandler) Update(w http.ResponseWriter, r *http.Request
 	}
 
 	companyID := r.PathValue("id")
-	if companyID != claims.CompanyID {
+	if claims.Role != "owner" && companyID != claims.CompanyID {
 		writeError(w, http.StatusNotFound, "company not found")
 		return
 	}
@@ -159,7 +210,7 @@ func (handler AdminCompanyHandler) Delete(w http.ResponseWriter, r *http.Request
 	}
 
 	companyID := r.PathValue("id")
-	if companyID != claims.CompanyID {
+	if claims.Role != "owner" && companyID != claims.CompanyID {
 		writeError(w, http.StatusNotFound, "company not found")
 		return
 	}
@@ -238,6 +289,17 @@ func (request *companyRequest) trim() {
 	request.Email = trimOptionalString(request.Email)
 	request.Phone = trimOptionalString(request.Phone)
 	request.Address = trimOptionalString(request.Address)
+}
+
+func (request companyRequest) validateCreate() error {
+	if request.Name == nil || *request.Name == "" {
+		return errors.New("name is required")
+	}
+	if request.Slug == nil || !guestFormSlugPattern.MatchString(*request.Slug) {
+		return errors.New("slug must use lowercase letters, numbers, and hyphens")
+	}
+
+	return nil
 }
 
 func (request companyRequest) validateUpdate() error {

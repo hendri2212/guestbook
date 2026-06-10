@@ -12,6 +12,7 @@ import (
 
 const (
 	defaultCompanySlug    = "instansi-demo"
+	smknKotabaruSlug      = "smkn-1-kotabaru"
 	defaultGuestFormSlug  = "buku-tamu-instansi-demo"
 	defaultAdminPassword  = "password"
 	defaultOwnerEmail     = "owner@instansi-demo.test"
@@ -30,12 +31,17 @@ func SeedDefaultData(db *gorm.DB) error {
 			return err
 		}
 
-		guestForm, err := seedGuestForm(tx, company.ID)
+		smknCompany, err := seedSMKNKotabaruCompany(tx)
 		if err != nil {
 			return err
 		}
 
-		return seedGuestVisit(tx, company.ID, guestForm.ID)
+		smknGuestForm, err := seedGuestForm(tx, smknCompany.ID, defaultGuestFormSlug, "Buku Tamu SMKN 1 Kotabaru", "Form buku tamu default untuk SMKN 1 Kotabaru.")
+		if err != nil {
+			return err
+		}
+
+		return seedGuestVisit(tx, smknCompany.ID, smknGuestForm.ID)
 	})
 }
 
@@ -47,6 +53,27 @@ func seedCompany(db *gorm.DB) (*models.Company, error) {
 	company := models.Company{
 		Name:     "Instansi Demo",
 		Slug:     defaultCompanySlug,
+		Email:    &email,
+		Phone:    &phone,
+		Address:  &address,
+		IsActive: true,
+	}
+
+	if err := db.Where("slug = ?", company.Slug).FirstOrCreate(&company).Error; err != nil {
+		return nil, err
+	}
+
+	return &company, nil
+}
+
+func seedSMKNKotabaruCompany(db *gorm.DB) (*models.Company, error) {
+	email := "info@smkn1kotabaru.sch.id"
+	phone := "081234567891"
+	address := "Kotabaru"
+
+	company := models.Company{
+		Name:     "SMKN 1 Kotabaru",
+		Slug:     smknKotabaruSlug,
 		Email:    &email,
 		Phone:    &phone,
 		Address:  &address,
@@ -97,8 +124,8 @@ func seedAdminUsers(db *gorm.DB, companyID string) error {
 	return nil
 }
 
-func seedGuestForm(db *gorm.DB, companyID string) (*models.GuestForm, error) {
-	description := "Form buku tamu default untuk Instansi Demo."
+func seedGuestForm(db *gorm.DB, companyID string, publicSlug string, title string, descriptionText string) (*models.GuestForm, error) {
+	description := descriptionText
 	fields := datatypes.JSON([]byte(`[
 		{"name":"identity_number","label":"Nomor Identitas","type":"text","required":false},
 		{"name":"department","label":"Departemen Tujuan","type":"text","required":false}
@@ -107,8 +134,8 @@ func seedGuestForm(db *gorm.DB, companyID string) (*models.GuestForm, error) {
 	guestForm := models.GuestForm{
 		CompanyID:        companyID,
 		Name:             "Form Buku Tamu Default",
-		PublicSlug:       defaultGuestFormSlug,
-		Title:            "Buku Tamu Instansi Demo",
+		PublicSlug:       publicSlug,
+		Title:            title,
 		Description:      &description,
 		IsActive:         true,
 		RequirePhoto:     false,

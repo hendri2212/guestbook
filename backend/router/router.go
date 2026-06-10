@@ -29,6 +29,7 @@ func New(db *gorm.DB, mysqlPort string, jwtSecret string, tokenExpiration time.D
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.Handle("GET /api/admin/me", authenticator.Middleware(http.HandlerFunc(authHandler.Me)))
 	mux.Handle("GET /api/admin/companies", authenticator.Middleware(http.HandlerFunc(adminCompanyHandler.List)))
+	mux.Handle("POST /api/admin/companies", authenticator.Middleware(http.HandlerFunc(adminCompanyHandler.Create)))
 	mux.Handle("GET /api/admin/companies/{id}", authenticator.Middleware(http.HandlerFunc(adminCompanyHandler.Detail)))
 	mux.Handle("PUT /api/admin/companies/{id}", authenticator.Middleware(http.HandlerFunc(adminCompanyHandler.Update)))
 	mux.Handle("DELETE /api/admin/companies/{id}", authenticator.Middleware(http.HandlerFunc(adminCompanyHandler.Delete)))
