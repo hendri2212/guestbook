@@ -9,9 +9,9 @@ import (
 
 type AdminUser struct {
 	ID           string         `json:"id" gorm:"type:char(36);primaryKey"`
-	CompanyID    string         `json:"company_id" gorm:"type:char(36);not null;index;uniqueIndex:idx_admin_users_company_email"`
+	CompanyID    string         `json:"company_id" gorm:"type:char(36);not null;index"`
 	Name         string         `json:"name" gorm:"type:varchar(120);not null"`
-	Email        string         `json:"email" gorm:"type:varchar(160);not null;uniqueIndex:idx_admin_users_company_email"`
+	Email        string         `json:"email" gorm:"type:varchar(160);not null;uniqueIndex:idx_admin_users_email"`
 	PasswordHash string         `json:"-" gorm:"type:text;not null"`
 	Role         string         `json:"role" gorm:"type:enum('owner','admin','staff');not null;default:'staff'"`
 	IsActive     bool           `json:"is_active" gorm:"not null;default:true"`

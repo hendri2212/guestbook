@@ -84,6 +84,17 @@ func connectDatabase() (*gorm.DB, error) {
 func autoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&models.Company{},
+	); err != nil {
+		return err
+	}
+
+	if db.Migrator().HasTable(&models.AdminUser{}) {
+		if err := ensureNoDuplicateAdminUserEmails(db); err != nil {
+			return err
+		}
+	}
+
+	if err := db.AutoMigrate(
 		&models.AdminUser{},
 		&models.GuestForm{},
 		&models.GuestVisit{},
@@ -91,7 +102,50 @@ func autoMigrate(db *gorm.DB) error {
 		return err
 	}
 
+	if err := enforceAdminUserEmailUniqueIndex(db); err != nil {
+		return err
+	}
+
 	return enforceGuestVisitRequiredColumns(db)
+}
+
+func enforceAdminUserEmailUniqueIndex(db *gorm.DB) error {
+	if err := ensureNoDuplicateAdminUserEmails(db); err != nil {
+		return err
+	}
+
+	if db.Migrator().HasIndex(&models.AdminUser{}, "idx_admin_users_company_email") {
+		if err := db.Migrator().DropIndex(&models.AdminUser{}, "idx_admin_users_company_email"); err != nil {
+			return err
+		}
+	}
+
+	if !db.Migrator().HasIndex(&models.AdminUser{}, "idx_admin_users_email") {
+		if err := db.Migrator().CreateIndex(&models.AdminUser{}, "idx_admin_users_email"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ensureNoDuplicateAdminUserEmails(db *gorm.DB) error {
+	var duplicateEmail string
+	err := db.Raw(`
+		SELECT email
+		FROM admin_users
+		GROUP BY email
+		HAVING COUNT(*) > 1
+		LIMIT 1
+	`).Scan(&duplicateEmail).Error
+	if err != nil {
+		return err
+	}
+	if duplicateEmail != "" {
+		return fmt.Errorf("admin_users.email has duplicate value %q; remove duplicates before creating unique index", duplicateEmail)
+	}
+
+	return nil
 }
 
 func enforceGuestVisitRequiredColumns(db *gorm.DB) error {

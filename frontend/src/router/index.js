@@ -30,7 +30,7 @@ const router = createRouter({
       name: 'admin-guest-forms',
       component: () => import('@/views/AdminGuestForms.vue'),
       meta: {
-        requiredRole: 'admin',
+        requiredRole: ['owner', 'admin'],
       },
     },
     {
@@ -85,7 +85,8 @@ router.beforeEach((to) => {
     return true
   }
 
-  if (auth.user?.role !== to.meta.requiredRole) {
+  const requiredRoles = Array.isArray(to.meta.requiredRole) ? to.meta.requiredRole : [to.meta.requiredRole]
+  if (!requiredRoles.includes(auth.user?.role)) {
     return { name: 'admin-dashboard' }
   }
 

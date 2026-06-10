@@ -40,7 +40,7 @@ defineEmits(['logout'])
           Kunjungan
         </RouterLink>
         <RouterLink
-          v-if="user?.role === 'admin'"
+          v-if="['owner', 'admin'].includes(user?.role)"
           class="nav-link"
           :class="{ active: activeMenu === 'guest-forms' }"
           to="/admin/guest-forms"

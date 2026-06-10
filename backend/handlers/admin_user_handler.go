@@ -150,7 +150,7 @@ func (handler AdminUserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "company_id is invalid")
 		return
 	}
-	if handler.emailExists(*request.CompanyID, *request.Email, "") {
+	if handler.emailExists(*request.Email, "") {
 		writeError(w, http.StatusConflict, "email already exists")
 		return
 	}
@@ -222,11 +222,7 @@ func (handler AdminUserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetCompanyID := adminUser.CompanyID
-	if request.CompanyID != nil {
-		targetCompanyID = *request.CompanyID
-	}
-	if request.Email != nil && handler.emailExists(targetCompanyID, *request.Email, adminUser.ID) {
+	if request.Email != nil && handler.emailExists(*request.Email, adminUser.ID) {
 		writeError(w, http.StatusConflict, "email already exists")
 		return
 	}
@@ -314,9 +310,9 @@ func (handler AdminUserHandler) findAdminUser(w http.ResponseWriter, claims *mid
 	return adminUser, true
 }
 
-func (handler AdminUserHandler) emailExists(companyID string, email string, exceptID string) bool {
+func (handler AdminUserHandler) emailExists(email string, exceptID string) bool {
 	query := handler.db.Unscoped().Model(&models.AdminUser{}).
-		Where("company_id = ? AND email = ?", companyID, email)
+		Where("email = ?", email)
 
 	if exceptID != "" {
 		query = query.Where("id <> ?", exceptID)

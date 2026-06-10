@@ -1,7 +1,7 @@
 <script setup>
 import QRCode from 'qrcode'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/AdminLayout.vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
@@ -42,7 +42,7 @@ const form = reactive({
 
 const user = computed(() => auth.value?.user || null)
 const company = computed(() => auth.value?.company || null)
-const canManageGuestForms = computed(() => user.value?.role === 'admin')
+const canManageGuestForms = computed(() => ['owner', 'admin'].includes(user.value?.role))
 const isEditing = computed(() => Boolean(editingID.value))
 const endpoint = computed(() => `${API_BASE_URL}/api/admin/guest-forms`)
 
@@ -514,14 +514,16 @@ onMounted(loadGuestForms)
                     </td>
                     <td class="text-end">
                       <div class="d-inline-flex gap-2">
-                        <RouterLink
+                        <a
                           class="btn btn-outline-secondary btn-sm icon-btn"
-                          :to="publicFormPath(guestForm.public_slug)"
+                          :href="publicFormUrl(guestForm.public_slug)"
+                          target="_blank"
+                          rel="noopener noreferrer"
                           title="Buka form public"
                           aria-label="Buka form public"
                         >
                           <i class="bi bi-box-arrow-up-right"></i>
-                        </RouterLink>
+                        </a>
                         <button
                           type="button"
                           class="btn btn-outline-success btn-sm icon-btn"
