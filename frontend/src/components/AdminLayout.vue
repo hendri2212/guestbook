@@ -48,6 +48,15 @@ defineEmits(['logout'])
           <i class="bi bi-ui-checks-grid"></i>
           Form Public
         </RouterLink>
+        <RouterLink
+          v-if="user?.role === 'owner'"
+          class="nav-link"
+          :class="{ active: activeMenu === 'users' }"
+          to="/admin/users"
+        >
+          <i class="bi bi-person-gear"></i>
+          Management User
+        </RouterLink>
         <RouterLink class="nav-link" :class="{ active: activeMenu === 'settings' }" to="/admin/settings">
           <i class="bi bi-gear"></i>
           Pengaturan

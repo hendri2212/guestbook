@@ -1,4 +1,5 @@
 <script setup>
+import QRCode from 'qrcode'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AdminLayout from '@/components/AdminLayout.vue'
@@ -21,6 +22,8 @@ const isDeleting = ref('')
 const pageError = ref('')
 const successMessage = ref('')
 const editingID = ref(null)
+const barcodeForm = ref(null)
+const qrCodes = ref({})
 
 const form = reactive({
   name: '',
@@ -121,6 +124,158 @@ function publicFormPath(publicSlug) {
   return `/forms/${publicSlug}`
 }
 
+function publicFormUrl(publicSlug) {
+  return new URL(publicFormPath(publicSlug), window.location.origin).href
+}
+
+async function generateQrCode(guestForm) {
+  if (!guestForm?.public_slug || qrCodes.value[guestForm.id]) {
+    return
+  }
+
+  qrCodes.value = {
+    ...qrCodes.value,
+    [guestForm.id]: await QRCode.toDataURL(publicFormUrl(guestForm.public_slug), {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff',
+      },
+    }),
+  }
+}
+
+async function generateQrCodes(forms) {
+  await Promise.all(forms.map((guestForm) => generateQrCode(guestForm)))
+}
+
+async function openBarcodeModal(guestForm) {
+  barcodeForm.value = guestForm
+  await generateQrCode(guestForm)
+}
+
+function closeBarcodeModal() {
+  barcodeForm.value = null
+}
+
+function printBarcode() {
+  if (!barcodeForm.value || !qrCodes.value[barcodeForm.value.id]) {
+    return
+  }
+
+  const printWindow = window.open('', '_blank', 'width=720,height=900')
+  if (!printWindow) {
+    window.print()
+    return
+  }
+
+  const formTitle = escapeHtml(barcodeForm.value.title || 'Form Public')
+  const companyName = escapeHtml(company.value?.name || 'Guestbook')
+  const publicUrl = escapeHtml(publicFormUrl(barcodeForm.value.public_slug))
+  const qrCode = qrCodes.value[barcodeForm.value.id]
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Barcode ${formTitle}</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 16mm;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          html,
+          body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+          }
+
+          body {
+            display: grid;
+            place-items: center;
+            color: #111827;
+            font-family: Arial, sans-serif;
+          }
+
+          .sheet {
+            display: grid;
+            width: 100%;
+            max-width: 150mm;
+            break-inside: avoid;
+            gap: 7mm;
+            justify-items: center;
+            page-break-inside: avoid;
+            text-align: center;
+          }
+
+          .company {
+            color: #64748b;
+            font-size: 12pt;
+            margin: 0;
+          }
+
+          h1 {
+            font-size: 20pt;
+            margin: 0;
+          }
+
+          .hint {
+            color: #64748b;
+            font-size: 12pt;
+            margin: 0;
+          }
+
+          .qr {
+            width: 90mm;
+            height: 90mm;
+          }
+
+          .url {
+            color: #334155;
+            font-size: 10pt;
+            font-weight: 700;
+            margin: 0;
+            overflow-wrap: anywhere;
+          }
+        </style>
+      </head>
+      <body>
+        <main class="sheet">
+          <p class="company">${companyName}</p>
+          <h1>${formTitle}</h1>
+          <p class="hint">Scan barcode untuk mengisi form buku tamu.</p>
+          <img class="qr" src="${qrCode}" alt="Barcode ${formTitle}" />
+          <p class="url">${publicUrl}</p>
+        </main>
+        <script>
+          window.addEventListener('load', () => {
+            window.print();
+            window.close();
+          });
+        <\/script>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
 function normalizeFields(rawFields) {
   if (Array.isArray(rawFields)) {
     return rawFields
@@ -190,6 +345,7 @@ async function loadGuestForms() {
     }
 
     guestForms.value = data
+    await generateQrCodes(data)
   } catch (error) {
     pageError.value = error.message || 'Gagal memuat guest form.'
     if (isAuthError(pageError.value)) {
@@ -368,6 +524,15 @@ onMounted(loadGuestForms)
                         </RouterLink>
                         <button
                           type="button"
+                          class="btn btn-outline-success btn-sm icon-btn"
+                          title="Barcode form"
+                          aria-label="Barcode form"
+                          @click="openBarcodeModal(guestForm)"
+                        >
+                          <i class="bi bi-qr-code"></i>
+                        </button>
+                        <button
+                          type="button"
                           class="btn btn-outline-primary btn-sm icon-btn"
                           title="Edit form"
                           aria-label="Edit form"
@@ -536,6 +701,56 @@ onMounted(loadGuestForms)
           </form>
         </div>
       </div>
+
+      <div
+        v-if="barcodeForm"
+        class="modal fade show barcode-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="barcodeTitle"
+        tabindex="-1"
+        @click.self="closeBarcodeModal"
+      >
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <p class="text-uppercase small fw-semibold text-primary mb-1">Barcode Form Public</p>
+                <h3 id="barcodeTitle" class="modal-title h5">{{ barcodeForm.title }}</h3>
+              </div>
+              <button type="button" class="btn-close no-print" aria-label="Tutup" @click="closeBarcodeModal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="barcode-print-area">
+                <div class="print-brand">
+                  <p class="small text-secondary mb-1">{{ company?.name || 'Guestbook' }}</p>
+                  <h4 class="h5 mb-1">{{ barcodeForm.title }}</h4>
+                  <p class="text-secondary mb-0">Scan barcode untuk mengisi form buku tamu.</p>
+                </div>
+
+                <div class="qr-frame">
+                  <img
+                    v-if="qrCodes[barcodeForm.id]"
+                    :src="qrCodes[barcodeForm.id]"
+                    :alt="`Barcode ${barcodeForm.title}`"
+                  />
+                  <div v-else class="alert alert-light border mb-0" role="status">Membuat barcode...</div>
+                </div>
+
+                <p class="public-url mb-0">{{ publicFormUrl(barcodeForm.public_slug) }}</p>
+              </div>
+            </div>
+            <div class="modal-footer no-print">
+              <button type="button" class="btn btn-light" @click="closeBarcodeModal">Tutup</button>
+              <button type="button" class="btn btn-primary" @click="printBarcode">
+                <i class="bi bi-printer me-2"></i>
+                Cetak Barcode
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="barcodeForm" class="modal-backdrop fade show no-print"></div>
   </AdminLayout>
 </template>
 
@@ -591,9 +806,87 @@ onMounted(loadGuestForms)
   padding: 0;
 }
 
+.barcode-modal {
+  display: block;
+}
+
+.barcode-print-area {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  text-align: center;
+}
+
+.qr-frame {
+  display: grid;
+  width: min(100%, 340px);
+  min-height: 340px;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.qr-frame img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+
+.public-url {
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 575.98px) {
   .option-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 16mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .barcode-print-area,
+  .barcode-print-area * {
+    visibility: visible;
+  }
+
+  .barcode-print-area {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    align-content: center;
+    width: 150mm;
+    background: #ffffff;
+    color: #111827;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    padding: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  .qr-frame {
+    width: 90mm;
+    min-height: 90mm;
+  }
+
+  .qr-frame img {
+    max-width: 86mm;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }
 </style>

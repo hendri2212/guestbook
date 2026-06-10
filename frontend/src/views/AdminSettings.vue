@@ -285,8 +285,8 @@ onMounted(loadProfile)
               </div>
             </div>
 
-            <div class="d-grid mt-4">
-              <button type="submit" class="btn btn-primary py-3" :disabled="!canEditCompany || isSavingCompany">
+            <div class="d-flex justify-content-end mt-4">
+              <button type="submit" class="btn btn-primary px-3" :disabled="!canEditCompany || isSavingCompany">
                 <span v-if="isSavingCompany" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 <i v-else class="bi bi-save me-2"></i>
                 {{ isSavingCompany ? 'Menyimpan...' : 'Simpan Data Instansi' }}
