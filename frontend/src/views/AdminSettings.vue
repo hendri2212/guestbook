@@ -191,8 +191,8 @@ onMounted(loadProfile)
       <template #header>
         <div>
           <p class="text-uppercase small fw-semibold text-primary mb-2">Pengaturan</p>
-          <h2 class="h3 mb-1">Pengaturan akun dan instansi</h2>
-          <p class="text-secondary mb-0">Informasi dasar dari sesi admin yang sedang aktif.</p>
+          <h2 class="h3 mb-1">Pengaturan instansi</h2>
+          <p class="text-secondary mb-0">Perbarui informasi dasar instansi yang sedang aktif.</p>
         </div>
       </template>
 
@@ -201,34 +201,7 @@ onMounted(loadProfile)
       <div v-if="successMessage" class="alert alert-success" role="alert">{{ successMessage }}</div>
 
       <div class="row g-4">
-        <div class="col-12 col-xl-6">
-          <section class="content-panel">
-            <div class="settings-heading">
-              <span class="settings-icon"><i class="bi bi-person-badge"></i></span>
-              <div>
-                <h3 class="h5 mb-1">Akun admin</h3>
-                <p class="text-secondary mb-0">Data pengguna yang sedang login.</p>
-              </div>
-            </div>
-
-            <dl class="settings-list mb-0">
-              <div>
-                <dt>Nama</dt>
-                <dd>{{ user?.name || '-' }}</dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd>{{ user?.email || '-' }}</dd>
-              </div>
-              <div>
-                <dt>Role</dt>
-                <dd>{{ user?.role || '-' }}</dd>
-              </div>
-            </dl>
-          </section>
-        </div>
-
-        <div class="col-12 col-xl-6">
+        <div class="col-12">
           <form class="content-panel" @submit.prevent="saveCompany">
             <div class="settings-heading">
               <span class="settings-icon"><i class="bi bi-building"></i></span>
@@ -341,29 +314,6 @@ onMounted(loadProfile)
   height: 46px;
   flex: 0 0 auto;
   border-radius: 14px;
-}
-
-.settings-list {
-  display: grid;
-  gap: 12px;
-}
-
-.settings-list div {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 12px;
-}
-
-.settings-list dt {
-  color: #64748b;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-}
-
-.settings-list dd {
-  margin-bottom: 0;
-  color: #111827;
-  font-weight: 650;
-  overflow-wrap: anywhere;
 }
 
 .form-label,

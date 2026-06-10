@@ -39,6 +39,11 @@ const router = createRouter({
       component: () => import('@/views/AdminSettings.vue'),
     },
     {
+      path: '/admin/profile',
+      name: 'admin-profile',
+      component: () => import('@/views/AdminProfile.vue'),
+    },
+    {
       path: '/forms/:publicSlug',
       name: 'public-form-prefixed',
       component: () => import('@/views/PublicGuestForm.vue'),

@@ -67,13 +67,26 @@ defineEmits(['logout'])
     <section class="admin-content">
       <header class="admin-header">
         <slot name="header"></slot>
-        <div class="user-chip">
-          <span class="avatar">{{ (user?.name || 'A').slice(0, 1) }}</span>
-          <div>
-            <p class="fw-semibold mb-0">{{ user?.name || 'Admin' }}</p>
-            <p class="small text-secondary mb-0">{{ user?.email || 'admin' }}</p>
+        <details class="user-menu">
+          <summary class="user-chip">
+            <span class="avatar">{{ (user?.name || 'A').slice(0, 1) }}</span>
+            <span class="user-chip-body">
+              <span class="fw-semibold">{{ user?.name || 'Admin' }}</span>
+              <span class="small text-secondary">{{ user?.email || 'admin' }}</span>
+            </span>
+            <i class="bi bi-chevron-down small text-secondary"></i>
+          </summary>
+          <div class="user-dropdown">
+            <RouterLink class="user-dropdown-item" to="/admin/profile">
+              <i class="bi bi-person-circle"></i>
+              Profile
+            </RouterLink>
+            <button type="button" class="user-dropdown-item text-danger" @click="$emit('logout')">
+              <i class="bi bi-box-arrow-right"></i>
+              Keluar
+            </button>
           </div>
-        </div>
+        </details>
       </header>
 
       <slot></slot>
@@ -155,6 +168,7 @@ defineEmits(['logout'])
   margin-bottom: 24px;
 }
 
+.user-menu,
 .user-chip,
 .content-panel {
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -163,11 +177,61 @@ defineEmits(['logout'])
   box-shadow: 0 16px 46px rgba(15, 23, 42, 0.06);
 }
 
+.user-menu {
+  position: relative;
+}
+
 .user-chip {
   display: flex;
   align-items: center;
   gap: 12px;
+  border: 0;
+  border-radius: 18px;
+  cursor: pointer;
+  list-style: none;
   padding: 12px 16px;
+  box-shadow: none;
+}
+
+.user-chip::-webkit-details-marker {
+  display: none;
+}
+
+.user-chip-body {
+  display: grid;
+  line-height: 1.2;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 210px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+  padding: 8px;
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #334155;
+  font-weight: 650;
+  padding: 10px 12px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.user-dropdown-item:hover {
+  background: #f1f5f9;
 }
 
 .content-panel {
@@ -194,8 +258,13 @@ defineEmits(['logout'])
     flex-direction: column;
   }
 
-  .user-chip {
+  .user-menu {
     width: 100%;
+  }
+
+  .user-dropdown {
+    left: 0;
+    right: auto;
   }
 }
 
