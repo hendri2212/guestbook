@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	defaultCompanySlug    = "instansi-demo"
-	smknKotabaruSlug      = "smkn-1-kotabaru"
 	defaultGuestFormSlug  = "buku-tamu-instansi-demo"
 	defaultAdminPassword  = "password"
 	defaultOwnerEmail     = "owner@instansi-demo.test"
@@ -36,6 +34,10 @@ func SeedDefaultData(db *gorm.DB) error {
 			return err
 		}
 
+		if err := seedSMKNKotabaruAdminUser(tx, smknCompany.ID); err != nil {
+			return err
+		}
+
 		smknGuestForm, err := seedGuestForm(tx, smknCompany.ID, defaultGuestFormSlug, "Buku Tamu SMKN 1 Kotabaru", "Form buku tamu default untuk SMKN 1 Kotabaru.")
 		if err != nil {
 			return err
@@ -52,14 +54,13 @@ func seedCompany(db *gorm.DB) (*models.Company, error) {
 
 	company := models.Company{
 		Name:     "Instansi Demo",
-		Slug:     defaultCompanySlug,
 		Email:    &email,
 		Phone:    &phone,
 		Address:  &address,
 		IsActive: true,
 	}
 
-	if err := db.Where("slug = ?", company.Slug).FirstOrCreate(&company).Error; err != nil {
+	if err := db.Where("name = ?", company.Name).FirstOrCreate(&company).Error; err != nil {
 		return nil, err
 	}
 
@@ -73,14 +74,13 @@ func seedSMKNKotabaruCompany(db *gorm.DB) (*models.Company, error) {
 
 	company := models.Company{
 		Name:     "SMKN 1 Kotabaru",
-		Slug:     smknKotabaruSlug,
 		Email:    &email,
 		Phone:    &phone,
 		Address:  &address,
 		IsActive: true,
 	}
 
-	if err := db.Where("slug = ?", company.Slug).FirstOrCreate(&company).Error; err != nil {
+	if err := db.Where("name = ?", company.Name).FirstOrCreate(&company).Error; err != nil {
 		return nil, err
 	}
 
@@ -102,19 +102,11 @@ func seedAdminUsers(db *gorm.DB, companyID string) error {
 			Role:         "owner",
 			IsActive:     true,
 		},
-		{
-			CompanyID:    companyID,
-			Name:         "Admin Instansi Demo",
-			Email:        defaultAdminEmail,
-			PasswordHash: string(passwordHash),
-			Role:         "admin",
-			IsActive:     true,
-		},
 	}
 
 	for _, adminUser := range adminUsers {
 		if err := db.
-			Where("company_id = ? AND email = ?", adminUser.CompanyID, adminUser.Email).
+			Where("email = ?", adminUser.Email).
 			FirstOrCreate(&adminUser).
 			Error; err != nil {
 			return err
@@ -122,6 +114,33 @@ func seedAdminUsers(db *gorm.DB, companyID string) error {
 	}
 
 	return nil
+}
+
+func seedSMKNKotabaruAdminUser(db *gorm.DB, companyID string) error {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(defaultAdminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	adminUser := models.AdminUser{
+		CompanyID:    companyID,
+		Name:         "Admin SMKN 1 Kotabaru",
+		Email:        defaultAdminEmail,
+		PasswordHash: string(passwordHash),
+		Role:         "admin",
+		IsActive:     true,
+	}
+
+	return db.
+		Where("email = ?", adminUser.Email).
+		Assign(models.AdminUser{
+			CompanyID: companyID,
+			Name:      adminUser.Name,
+			Role:      adminUser.Role,
+			IsActive:  adminUser.IsActive,
+		}).
+		FirstOrCreate(&adminUser).
+		Error
 }
 
 func seedGuestForm(db *gorm.DB, companyID string, publicSlug string, title string, descriptionText string) (*models.GuestForm, error) {

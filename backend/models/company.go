@@ -10,7 +10,6 @@ import (
 type Company struct {
 	ID        string         `json:"id" gorm:"type:char(36);primaryKey"`
 	Name      string         `json:"name" gorm:"type:varchar(160);not null"`
-	Slug      string         `json:"slug" gorm:"type:varchar(80);not null;uniqueIndex"`
 	Email     *string        `json:"email" gorm:"type:varchar(160)"`
 	Phone     *string        `json:"phone" gorm:"type:varchar(40)"`
 	Address   *string        `json:"address" gorm:"type:text"`

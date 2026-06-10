@@ -21,9 +21,8 @@ type AuthHandler struct {
 }
 
 type loginRequest struct {
-	CompanySlug string `json:"company_slug"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type loginResponse struct {
@@ -43,7 +42,6 @@ type authUser struct {
 type company struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	Slug string `json:"slug"`
 }
 
 type meResponse struct {
@@ -72,21 +70,17 @@ func (handler AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var companyRecord models.Company
+	var adminUser models.AdminUser
 	if err := handler.db.
-		Where("slug = ? AND is_active = ?", request.CompanySlug, true).
-		First(&companyRecord).
+		Preload("Company").
+		Where("email = ? AND is_active = ?", request.Email, true).
+		First(&adminUser).
 		Error; err != nil {
 		writeInvalidCredentials(w, err)
 		return
 	}
-
-	var adminUser models.AdminUser
-	if err := handler.db.
-		Where("company_id = ? AND email = ? AND is_active = ?", companyRecord.ID, request.Email, true).
-		First(&adminUser).
-		Error; err != nil {
-		writeInvalidCredentials(w, err)
+	if !adminUser.Company.IsActive {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
@@ -112,7 +106,7 @@ func (handler AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Token:     token,
 		ExpiresAt: expiresAt,
 		User:      newAuthUser(adminUser),
-		Company:   newCompany(companyRecord),
+		Company:   newCompany(adminUser.Company),
 	})
 }
 
@@ -148,16 +142,11 @@ func (handler AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (request *loginRequest) trim() {
-	request.CompanySlug = strings.TrimSpace(request.CompanySlug)
 	request.Email = strings.ToLower(strings.TrimSpace(request.Email))
 	request.Password = strings.TrimSpace(request.Password)
 }
 
 func (request loginRequest) validate() error {
-	if request.CompanySlug == "" {
-		return errors.New("company_slug is required")
-	}
-
 	if request.Email == "" {
 		return errors.New("email is required")
 	}
@@ -191,6 +180,5 @@ func newCompany(companyRecord models.Company) company {
 	return company{
 		ID:   companyRecord.ID,
 		Name: companyRecord.Name,
-		Slug: companyRecord.Slug,
 	}
 }

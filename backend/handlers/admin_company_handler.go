@@ -19,7 +19,6 @@ type AdminCompanyHandler struct {
 
 type companyRequest struct {
 	Name     *string `json:"name"`
-	Slug     *string `json:"slug"`
 	Email    *string `json:"email"`
 	Phone    *string `json:"phone"`
 	Address  *string `json:"address"`
@@ -29,7 +28,6 @@ type companyRequest struct {
 type companyResponse struct {
 	ID        string       `json:"id"`
 	Name      string       `json:"name"`
-	Slug      string       `json:"slug"`
 	Email     *string      `json:"email"`
 	Phone     *string      `json:"phone"`
 	Address   *string      `json:"address"`
@@ -114,14 +112,8 @@ func (handler AdminCompanyHandler) Create(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if handler.slugExists(*request.Slug, "") {
-		writeError(w, http.StatusConflict, "slug already exists")
-		return
-	}
-
 	company := models.Company{
 		Name:     *request.Name,
-		Slug:     *request.Slug,
 		Email:    trimOptionalString(request.Email),
 		Phone:    trimOptionalString(request.Phone),
 		Address:  trimOptionalString(request.Address),
@@ -168,16 +160,8 @@ func (handler AdminCompanyHandler) Update(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if request.Slug != nil && handler.slugExists(*request.Slug, company.ID) {
-		writeError(w, http.StatusConflict, "slug already exists")
-		return
-	}
-
 	if request.Name != nil {
 		company.Name = *request.Name
-	}
-	if request.Slug != nil {
-		company.Slug = *request.Slug
 	}
 	if request.Email != nil {
 		company.Email = trimOptionalString(request.Email)
@@ -246,23 +230,10 @@ func (handler AdminCompanyHandler) findCompany(w http.ResponseWriter, companyID 
 	return company, true
 }
 
-func (handler AdminCompanyHandler) slugExists(slug string, exceptID string) bool {
-	query := handler.db.Unscoped().Model(&models.Company{}).
-		Where("slug = ?", slug)
-
-	if exceptID != "" {
-		query = query.Where("id <> ?", exceptID)
-	}
-
-	var count int64
-	return query.Count(&count).Error == nil && count > 0
-}
-
 func (handler AdminCompanyHandler) newCompanyResponse(company models.Company) companyResponse {
 	return companyResponse{
 		ID:        company.ID,
 		Name:      company.Name,
-		Slug:      company.Slug,
 		Email:     company.Email,
 		Phone:     company.Phone,
 		Address:   company.Address,
@@ -285,7 +256,6 @@ func (handler AdminCompanyHandler) companyStats(companyID string) companyStats {
 
 func (request *companyRequest) trim() {
 	request.Name = trimStringPointer(request.Name)
-	request.Slug = normalizeSlugPointer(request.Slug)
 	request.Email = trimOptionalString(request.Email)
 	request.Phone = trimOptionalString(request.Phone)
 	request.Address = trimOptionalString(request.Address)
@@ -295,9 +265,6 @@ func (request companyRequest) validateCreate() error {
 	if request.Name == nil || *request.Name == "" {
 		return errors.New("name is required")
 	}
-	if request.Slug == nil || !guestFormSlugPattern.MatchString(*request.Slug) {
-		return errors.New("slug must use lowercase letters, numbers, and hyphens")
-	}
 
 	return nil
 }
@@ -306,10 +273,6 @@ func (request companyRequest) validateUpdate() error {
 	if request.Name != nil && *request.Name == "" {
 		return errors.New("name is required")
 	}
-	if request.Slug != nil && !guestFormSlugPattern.MatchString(*request.Slug) {
-		return errors.New("slug must use lowercase letters, numbers, and hyphens")
-	}
-
 	return nil
 }
 
@@ -320,15 +283,6 @@ func trimStringPointer(value *string) *string {
 
 	trimmed := strings.TrimSpace(*value)
 	return &trimmed
-}
-
-func normalizeSlugPointer(value *string) *string {
-	if value == nil {
-		return nil
-	}
-
-	normalized := strings.ToLower(strings.TrimSpace(*value))
-	return &normalized
 }
 
 func requireOwner(w http.ResponseWriter, claims *middleware.AuthClaims) bool {
