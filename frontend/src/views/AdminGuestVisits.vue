@@ -139,10 +139,10 @@ onMounted(loadData)
           <i class="bi bi-ui-checks-grid"></i>
           Form Public
         </RouterLink>
-        <a class="nav-link disabled" href="#" aria-disabled="true">
+        <RouterLink class="nav-link" to="/admin/settings">
           <i class="bi bi-gear"></i>
           Pengaturan
-        </a>
+        </RouterLink>
       </nav>
 
       <div class="sidebar-footer mt-auto">
