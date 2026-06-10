@@ -9,27 +9,30 @@ const router = useRouter()
 const auth = ref(readStoredAuth())
 const isLoading = ref(false)
 const loadError = ref('')
+const guestForms = ref([])
+const guestVisits = ref([])
 
 const user = computed(() => auth.value?.user || null)
 const company = computed(() => auth.value?.company || null)
 const canManageGuestForms = computed(() => user.value?.role === 'admin')
-const publicFormUrl = computed(() => {
-  const slug = company.value?.slug ? `buku-tamu-${company.value.slug}` : 'buku-tamu-instansi-demo'
-  return `/forms/${slug}`
+const activeGuestForms = computed(() => guestForms.value.filter((guestForm) => guestForm.is_active))
+const todayDate = computed(() => new Date().toISOString().slice(0, 10))
+const todayVisits = computed(() => guestVisits.value.filter((visit) => visit.visit_date === todayDate.value))
+const checkedInVisits = computed(() => guestVisits.value.filter((visit) => visit.status === 'checked_in'))
+const companiesCount = computed(() => {
+  return new Set(
+    guestVisits.value
+      .map((visit) => (visit.guest_company || '').trim())
+      .filter((companyName) => companyName !== ''),
+  ).size
 })
-
-const stats = [
-  { label: 'Tamu hari ini', value: '12', tone: 'primary' },
-  { label: 'Sedang berkunjung', value: '4', tone: 'success' },
-  { label: 'Form aktif', value: '1', tone: 'info' },
-  { label: 'Perlu follow-up', value: '3', tone: 'warning' },
-]
-
-const recentVisits = [
-  { name: 'Budi Santoso', company: 'PT Contoh Sejahtera', purpose: 'Meeting administrasi', status: 'Checked in' },
-  { name: 'Sari Dewi', company: 'CV Nusantara', purpose: 'Pengiriman dokumen', status: 'Checked out' },
-  { name: 'Andi Pratama', company: 'Mandiri Vendor', purpose: 'Koordinasi proyek', status: 'Checked in' },
-]
+const stats = computed(() => [
+  { label: 'Tamu hari ini', value: todayVisits.value.length, tone: 'primary' },
+  { label: 'Sedang berkunjung', value: checkedInVisits.value.length, tone: 'success' },
+  { label: 'Form aktif', value: activeGuestForms.value.length, tone: 'info' },
+  { label: 'Instansi tercatat', value: companiesCount.value, tone: 'warning' },
+])
+const recentVisits = computed(() => guestVisits.value.slice(0, 5))
 
 function readStoredAuth() {
   try {
@@ -50,7 +53,31 @@ function logout() {
   router.push({ name: 'admin-login' })
 }
 
-async function loadProfile() {
+function redirectToLogin() {
+  clearSession()
+  router.replace({ name: 'admin-login' })
+}
+
+function authHeaders() {
+  return {
+    Authorization: `Bearer ${auth.value?.token}`,
+  }
+}
+
+function statusLabel(status) {
+  if (status === 'checked_in') {
+    return 'Checked in'
+  }
+  if (status === 'checked_out') {
+    return 'Checked out'
+  }
+  if (status === 'cancelled') {
+    return 'Cancelled'
+  }
+  return status || '-'
+}
+
+async function loadDashboard() {
   if (!auth.value?.token) {
     router.replace({ name: 'admin-login' })
     return
@@ -60,33 +87,54 @@ async function loadProfile() {
   loadError.value = ''
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admin/me`, {
-      headers: {
-        Authorization: `Bearer ${auth.value.token}`,
-      },
-    })
+    const [profileResponse, formsResponse, visitsResponse] = await Promise.all([
+      fetch(`${API_BASE_URL}/api/admin/me`, { headers: authHeaders() }),
+      fetch(`${API_BASE_URL}/api/admin/guest-forms`, { headers: authHeaders() }),
+      fetch(`${API_BASE_URL}/api/admin/guest-visits`, { headers: authHeaders() }),
+    ])
+    const profileData = await profileResponse.json().catch(() => ({}))
+    const formsData = await formsResponse.json().catch(() => ({}))
+    const visitsData = await visitsResponse.json().catch(() => ({}))
 
-    const data = await response.json().catch(() => ({}))
+    if ([profileResponse, formsResponse, visitsResponse].some((response) => response.status === 401)) {
+      redirectToLogin()
+      return
+    }
 
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Sesi tidak valid.')
+    if (!profileResponse.ok) {
+      throw new Error(profileData.error || profileData.message || 'Sesi tidak valid.')
+    }
+    if (!formsResponse.ok) {
+      throw new Error(formsData.error || formsData.message || 'Gagal memuat form public.')
+    }
+    if (!visitsResponse.ok) {
+      throw new Error(visitsData.error || visitsData.message || 'Gagal memuat kunjungan.')
     }
 
     auth.value = {
       ...auth.value,
-      user: data.user,
-      company: data.company,
+      user: profileData.user,
+      company: profileData.company,
     }
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth.value))
+    guestForms.value = formsData
+    guestVisits.value = visitsData
   } catch (error) {
-    loadError.value = error.message || 'Gagal memuat profil admin.'
-    clearSession()
+    loadError.value = error.message || 'Gagal memuat dashboard.'
+    if (isAuthError(loadError.value)) {
+      redirectToLogin()
+    }
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(loadProfile)
+function isAuthError(message) {
+  const normalized = message.toLowerCase()
+  return normalized.includes('unauthorized') || normalized.includes('invalid') || normalized.includes('expired') || normalized.includes('sesi')
+}
+
+onMounted(loadDashboard)
 </script>
 
 <template>
@@ -101,18 +149,31 @@ onMounted(loadProfile)
       </div>
 
       <nav class="nav flex-column gap-1">
-        <RouterLink class="nav-link active" to="/admin">Dashboard</RouterLink>
-        <a class="nav-link disabled" href="#" aria-disabled="true">Kunjungan</a>
+        <RouterLink class="nav-link active" to="/admin">
+          <i class="bi bi-speedometer2"></i>
+          Dashboard
+        </RouterLink>
+        <RouterLink class="nav-link" to="/admin/guest-visits">
+          <i class="bi bi-people"></i>
+          Kunjungan
+        </RouterLink>
         <RouterLink v-if="canManageGuestForms" class="nav-link" to="/admin/guest-forms">
+          <i class="bi bi-ui-checks-grid"></i>
           Form Public
         </RouterLink>
-        <a class="nav-link disabled" href="#" aria-disabled="true">Pengaturan</a>
+        <a class="nav-link disabled" href="#" aria-disabled="true">
+          <i class="bi bi-gear"></i>
+          Pengaturan
+        </a>
       </nav>
 
       <div class="sidebar-footer mt-auto">
         <p class="small text-secondary mb-1">Instansi</p>
         <p class="fw-semibold mb-3">{{ company?.name || 'Memuat...' }}</p>
-        <button type="button" class="btn btn-outline-secondary w-100" @click="logout">Keluar</button>
+        <button type="button" class="btn btn-outline-secondary w-100" @click="logout">
+          <i class="bi bi-box-arrow-right me-2"></i>
+          Keluar
+        </button>
       </div>
     </aside>
 
@@ -135,7 +196,7 @@ onMounted(loadProfile)
       </header>
 
       <div v-if="isLoading" class="alert alert-light border" role="status">
-        Memuat profil admin...
+        Memuat dashboard...
       </div>
 
       <div v-if="loadError" class="alert alert-warning" role="alert">
@@ -148,43 +209,48 @@ onMounted(loadProfile)
             <p class="text-secondary mb-2">{{ item.label }}</p>
             <div class="d-flex align-items-end justify-content-between">
               <strong class="metric-value">{{ item.value }}</strong>
-              <span :class="`badge text-bg-${item.tone}`">Live</span>
+              <span :class="`badge text-bg-${item.tone}`">
+                <i class="bi bi-activity me-1"></i>
+                Live
+              </span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="row g-4">
-        <div class="col-12 col-xl-8">
+        <div class="col-12">
           <section class="content-panel">
             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
               <div>
                 <h3 class="h5 mb-1">Kunjungan terbaru</h3>
-                <p class="text-secondary mb-0">Data contoh untuk template awal dashboard.</p>
+                <p class="text-secondary mb-0">Data terbaru dari seluruh form public instansi.</p>
               </div>
-              <RouterLink v-if="canManageGuestForms" class="btn btn-outline-primary btn-sm" to="/admin/guest-forms">
-                Kelola form
+              <RouterLink class="btn btn-outline-primary btn-sm" to="/admin/guest-visits">
+                <i class="bi bi-list-check me-1"></i>
+                Kelola kunjungan
               </RouterLink>
             </div>
 
-            <div class="table-responsive">
+            <div v-if="recentVisits.length === 0" class="empty-state">
+              <h4 class="h6 mb-2">Belum ada kunjungan</h4>
+              <p class="text-secondary mb-0">Data akan tampil setelah tamu mengisi form public.</p>
+            </div>
+
+            <div v-else class="table-responsive">
               <table class="table align-middle mb-0">
                 <thead>
                   <tr>
                     <th>Nama</th>
                     <th>Instansi</th>
                     <th>Keperluan</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="visit in recentVisits" :key="visit.name">
-                    <td class="fw-semibold">{{ visit.name }}</td>
-                    <td>{{ visit.company }}</td>
+                  <tr v-for="visit in recentVisits" :key="visit.id">
+                    <td class="fw-semibold">{{ visit.guest_name }}</td>
+                    <td>{{ visit.guest_company || '-' }}</td>
                     <td>{{ visit.purpose }}</td>
-                    <td>
-                      <span class="badge rounded-pill text-bg-light border">{{ visit.status }}</span>
-                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -192,15 +258,6 @@ onMounted(loadProfile)
           </section>
         </div>
 
-        <div class="col-12 col-xl-4">
-          <section class="content-panel">
-            <h3 class="h5 mb-3">Akses form public</h3>
-            <p class="text-secondary">
-              Gunakan tautan ini untuk membuka halaman check-in tamu milik instansi.
-            </p>
-            <RouterLink class="btn btn-primary w-100" :to="publicFormUrl">Buka Form Public</RouterLink>
-          </section>
-        </div>
       </div>
     </section>
   </main>
@@ -247,6 +304,9 @@ onMounted(loadProfile)
 }
 
 .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border-radius: 12px;
   color: #475569;
   font-weight: 650;
@@ -301,6 +361,13 @@ onMounted(loadProfile)
   color: #111827;
   font-size: 2rem;
   line-height: 1;
+}
+
+.empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 24px;
 }
 
 .table th {

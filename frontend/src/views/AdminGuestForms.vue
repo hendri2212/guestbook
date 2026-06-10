@@ -68,6 +68,16 @@ function logout() {
   router.push({ name: 'admin-login' })
 }
 
+function redirectToLogin() {
+  clearSession()
+  router.replace({ name: 'admin-login' })
+}
+
+function isAuthError(message) {
+  const normalized = message.toLowerCase()
+  return normalized.includes('unauthorized') || normalized.includes('invalid') || normalized.includes('expired')
+}
+
 function resetForm() {
   editingID.value = null
   Object.assign(form, {
@@ -169,6 +179,11 @@ async function loadGuestForms() {
     })
     const data = await response.json().catch(() => ({}))
 
+    if (response.status === 401) {
+      redirectToLogin()
+      return
+    }
+
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Gagal memuat guest form.')
     }
@@ -176,9 +191,8 @@ async function loadGuestForms() {
     guestForms.value = data
   } catch (error) {
     pageError.value = error.message || 'Gagal memuat guest form.'
-    if (pageError.value.toLowerCase().includes('unauthorized')) {
-      clearSession()
-      router.replace({ name: 'admin-login' })
+    if (isAuthError(pageError.value)) {
+      redirectToLogin()
     }
   } finally {
     isLoading.value = false
@@ -209,6 +223,11 @@ async function saveGuestForm() {
     })
     const data = await response.json().catch(() => ({}))
 
+    if (response.status === 401) {
+      redirectToLogin()
+      return
+    }
+
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Guest form gagal disimpan.')
     }
@@ -218,6 +237,9 @@ async function saveGuestForm() {
     await loadGuestForms()
   } catch (error) {
     pageError.value = error.message || 'Guest form gagal disimpan.'
+    if (isAuthError(pageError.value)) {
+      redirectToLogin()
+    }
   } finally {
     isSaving.value = false
   }
@@ -243,6 +265,10 @@ async function deleteGuestForm(guestForm) {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
+      if (response.status === 401) {
+        redirectToLogin()
+        return
+      }
       throw new Error(data.error || data.message || 'Guest form gagal dihapus.')
     }
 
@@ -253,6 +279,9 @@ async function deleteGuestForm(guestForm) {
     await loadGuestForms()
   } catch (error) {
     pageError.value = error.message || 'Guest form gagal dihapus.'
+    if (isAuthError(pageError.value)) {
+      redirectToLogin()
+    }
   } finally {
     isDeleting.value = ''
   }
@@ -273,16 +302,31 @@ onMounted(loadGuestForms)
       </div>
 
       <nav class="nav flex-column gap-1">
-        <RouterLink class="nav-link" to="/admin">Dashboard</RouterLink>
-        <a class="nav-link disabled" href="#" aria-disabled="true">Kunjungan</a>
-        <RouterLink class="nav-link active" to="/admin/guest-forms">Form Public</RouterLink>
-        <a class="nav-link disabled" href="#" aria-disabled="true">Pengaturan</a>
+        <RouterLink class="nav-link" to="/admin">
+          <i class="bi bi-speedometer2"></i>
+          Dashboard
+        </RouterLink>
+        <RouterLink class="nav-link" to="/admin/guest-visits">
+          <i class="bi bi-people"></i>
+          Kunjungan
+        </RouterLink>
+        <RouterLink class="nav-link active" to="/admin/guest-forms">
+          <i class="bi bi-ui-checks-grid"></i>
+          Form Public
+        </RouterLink>
+        <a class="nav-link disabled" href="#" aria-disabled="true">
+          <i class="bi bi-gear"></i>
+          Pengaturan
+        </a>
       </nav>
 
       <div class="sidebar-footer mt-auto">
         <p class="small text-secondary mb-1">Instansi</p>
         <p class="fw-semibold mb-3">{{ company?.name || 'Memuat...' }}</p>
-        <button type="button" class="btn btn-outline-secondary w-100" @click="logout">Keluar</button>
+        <button type="button" class="btn btn-outline-secondary w-100" @click="logout">
+          <i class="bi bi-box-arrow-right me-2"></i>
+          Keluar
+        </button>
       </div>
     </aside>
 
@@ -316,6 +360,7 @@ onMounted(loadGuestForms)
                 <p class="text-secondary mb-0">Form yang aktif dapat diakses oleh tamu melalui URL public.</p>
               </div>
               <button type="button" class="btn btn-outline-primary btn-sm" @click="loadGuestForms">
+                <i class="bi bi-arrow-clockwise me-1"></i>
                 Refresh
               </button>
             </div>
@@ -359,25 +404,36 @@ onMounted(loadGuestForms)
                     <td class="text-end">
                       <div class="d-inline-flex gap-2">
                         <RouterLink
-                          class="btn btn-outline-secondary btn-sm"
+                          class="btn btn-outline-secondary btn-sm icon-btn"
                           :to="publicFormPath(guestForm.public_slug)"
+                          title="Buka form public"
+                          aria-label="Buka form public"
                         >
-                          Buka
+                          <i class="bi bi-box-arrow-up-right"></i>
                         </RouterLink>
                         <button
                           type="button"
-                          class="btn btn-outline-primary btn-sm"
+                          class="btn btn-outline-primary btn-sm icon-btn"
+                          title="Edit form"
+                          aria-label="Edit form"
                           @click="editGuestForm(guestForm)"
                         >
-                          Edit
+                          <i class="bi bi-pencil-square"></i>
                         </button>
                         <button
                           type="button"
-                          class="btn btn-outline-danger btn-sm"
+                          class="btn btn-outline-danger btn-sm icon-btn"
                           :disabled="isDeleting === guestForm.id"
+                          title="Hapus form"
+                          aria-label="Hapus form"
                           @click="deleteGuestForm(guestForm)"
                         >
-                          {{ isDeleting === guestForm.id ? 'Hapus...' : 'Hapus' }}
+                          <span
+                            v-if="isDeleting === guestForm.id"
+                            class="spinner-border spinner-border-sm"
+                            aria-hidden="true"
+                          ></span>
+                          <i v-else class="bi bi-trash"></i>
                         </button>
                       </div>
                     </td>
@@ -396,6 +452,7 @@ onMounted(loadGuestForms)
                 <p class="text-secondary mb-0">Slug harus huruf kecil, angka, dan tanda hubung.</p>
               </div>
               <button v-if="isEditing" type="button" class="btn btn-light btn-sm" @click="resetForm">
+                <i class="bi bi-x-lg me-1"></i>
                 Batal
               </button>
             </div>
@@ -517,6 +574,7 @@ onMounted(loadGuestForms)
             <div class="d-grid mt-4">
               <button type="submit" class="btn btn-primary py-3" :disabled="isSaving">
                 <span v-if="isSaving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                <i v-else class="bi bi-save me-2"></i>
                 {{ isSaving ? 'Menyimpan...' : isEditing ? 'Simpan Perubahan' : 'Buat Guest Form' }}
               </button>
             </div>
@@ -568,6 +626,9 @@ onMounted(loadGuestForms)
 }
 
 .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border-radius: 12px;
   color: #475569;
   font-weight: 650;
@@ -662,6 +723,14 @@ onMounted(loadGuestForms)
 .btn {
   border-radius: 12px;
   font-weight: 700;
+}
+
+.icon-btn {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
 }
 
 @media (max-width: 991.98px) {

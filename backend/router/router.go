@@ -18,6 +18,7 @@ func New(db *gorm.DB, mysqlPort string, jwtSecret string, tokenExpiration time.D
 	authenticator := middleware.NewAuthenticator(jwtSecret)
 	authHandler := handlers.NewAuthHandler(db, authenticator, tokenExpiration)
 	adminGuestFormHandler := handlers.NewAdminGuestFormHandler(db)
+	adminGuestVisitHandler := handlers.NewAdminGuestVisitHandler(db)
 
 	mux.HandleFunc("GET /health", systemHandler.Health)
 	mux.HandleFunc("GET /migrations", systemHandler.Migrations)
@@ -30,6 +31,12 @@ func New(db *gorm.DB, mysqlPort string, jwtSecret string, tokenExpiration time.D
 	mux.Handle("GET /api/admin/guest-forms/{id}", authenticator.Middleware(http.HandlerFunc(adminGuestFormHandler.Detail)))
 	mux.Handle("PUT /api/admin/guest-forms/{id}", authenticator.Middleware(http.HandlerFunc(adminGuestFormHandler.Update)))
 	mux.Handle("DELETE /api/admin/guest-forms/{id}", authenticator.Middleware(http.HandlerFunc(adminGuestFormHandler.Delete)))
+	mux.Handle("GET /api/admin/guest-visits", authenticator.Middleware(http.HandlerFunc(adminGuestVisitHandler.List)))
+	mux.Handle("POST /api/admin/guest-visits", authenticator.Middleware(http.HandlerFunc(adminGuestVisitHandler.Create)))
+	mux.Handle("GET /api/admin/guest-visits/{id}", authenticator.Middleware(http.HandlerFunc(adminGuestVisitHandler.Detail)))
+	mux.Handle("PUT /api/admin/guest-visits/{id}", authenticator.Middleware(http.HandlerFunc(adminGuestVisitHandler.Update)))
+	mux.Handle("PATCH /api/admin/guest-visits/{id}/check-out", authenticator.Middleware(http.HandlerFunc(adminGuestVisitHandler.CheckOut)))
+	mux.Handle("DELETE /api/admin/guest-visits/{id}", authenticator.Middleware(http.HandlerFunc(adminGuestVisitHandler.Delete)))
 
 	return withCORS(mux)
 }

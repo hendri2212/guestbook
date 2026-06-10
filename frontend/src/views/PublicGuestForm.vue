@@ -35,6 +35,7 @@ const formLoadError = ref('')
 const guestForm = ref(null)
 const submitError = ref('')
 const submitResult = ref(null)
+const isSuccessModalOpen = ref(false)
 
 const formEndpoint = computed(
   () => `${API_BASE_URL}/api/public/forms/${encodeURIComponent(publicSlug.value)}`,
@@ -146,12 +147,18 @@ async function submitGuestVisit() {
     }
 
     submitResult.value = data
+    isSuccessModalOpen.value = true
     resetForm()
   } catch (error) {
     submitError.value = error.message || 'Terjadi kesalahan saat mengirim data.'
   } finally {
     isSubmitting.value = false
   }
+}
+
+function closeSuccessModal() {
+  isSuccessModalOpen.value = false
+  submitResult.value = null
 }
 
 async function loadGuestForm() {
@@ -189,7 +196,7 @@ onMounted(loadGuestForm)
         <div class="col-12 col-xl-11">
           <div class="topbar d-flex align-items-center justify-content-between gap-3 mb-4">
             <div class="brand d-flex align-items-center gap-3">
-              <div class="brand-mark" aria-hidden="true">BT</div>
+              <div class="brand-mark" aria-hidden="true"><i class="bi bi-journal-text"></i></div>
               <div>
                 <p class="brand-label mb-1">Buku Tamu Digital</p>
                 <h1 class="h4 mb-0">Form Kunjungan Tamu</h1>
@@ -266,11 +273,6 @@ onMounted(loadGuestForm)
                   <span class="required-note">* Wajib</span>
                 </div>
 
-                <div v-if="submitResult" class="alert alert-success" role="alert">
-                  Kunjungan berhasil disimpan. Status:
-                  <strong>{{ submitResult.status }}</strong>
-                </div>
-
                 <div v-if="submitError" class="alert alert-danger" role="alert">
                   {{ submitError }}
                 </div>
@@ -340,6 +342,7 @@ onMounted(loadGuestForm)
                 <div class="d-grid d-sm-flex justify-content-sm-end mt-4">
                   <button type="submit" class="btn btn-primary btn-lg px-4" :disabled="isSubmitting">
                     <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <i v-else class="bi bi-send-check me-2"></i>
                     {{ isSubmitting ? 'Menyimpan...' : 'Simpan Kunjungan' }}
                   </button>
                 </div>
@@ -349,6 +352,32 @@ onMounted(loadGuestForm)
         </div>
       </div>
     </section>
+
+    <div
+      v-if="isSuccessModalOpen"
+      class="modal fade show thank-you-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="thankYouTitle"
+      tabindex="-1"
+      @click.self="closeSuccessModal"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body text-center p-4 p-md-5">
+            <div class="success-icon mx-auto mb-3">
+              <i class="bi bi-check2"></i>
+            </div>
+            <h2 id="thankYouTitle" class="h4 mb-2">Terima kasih</h2>
+            <p class="text-secondary mb-4">
+              Data kunjungan Anda berhasil tersimpan. Silakan menunggu arahan dari petugas.
+            </p>
+            <button type="button" class="btn btn-primary px-4" @click="closeSuccessModal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="isSuccessModalOpen" class="modal-backdrop fade show"></div>
   </main>
 </template>
 
@@ -474,6 +503,21 @@ onMounted(loadGuestForm)
 .btn {
   border-radius: 12px;
   font-weight: 700;
+}
+
+.thank-you-modal {
+  display: block;
+}
+
+.success-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 2rem;
 }
 
 @media (max-width: 575.98px) {

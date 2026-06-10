@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+const DEFAULT_COMPANY_SLUG = import.meta.env.VITE_COMPANY_SLUG || 'instansi-demo'
 const AUTH_STORAGE_KEY = 'guestbook_admin_auth'
 
 const router = useRouter()
@@ -10,7 +11,6 @@ const isSubmitting = ref(false)
 const loginError = ref('')
 
 const form = reactive({
-  company_slug: 'instansi-demo',
   email: 'admin@instansi-demo.test',
   password: '',
 })
@@ -28,7 +28,7 @@ async function submitLogin() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        company_slug: form.company_slug.trim(),
+        company_slug: DEFAULT_COMPANY_SLUG,
         email: form.email.trim(),
         password: form.password,
       }),
@@ -65,7 +65,7 @@ async function submitLogin() {
       <div class="row justify-content-center w-100 g-4">
         <div class="col-12 col-lg-5">
           <div class="login-intro h-100">
-            <div class="brand-mark mb-4">BT</div>
+            <div class="brand-mark mb-4"><i class="bi bi-journal-check"></i></div>
             <p class="text-uppercase small fw-semibold text-primary mb-3">Admin Panel</p>
             <h1 class="login-title mb-3">Kelola buku tamu dari satu dashboard.</h1>
             <p class="text-secondary mb-0">
@@ -84,18 +84,6 @@ async function submitLogin() {
 
             <div v-if="loginError" class="alert alert-danger" role="alert">
               {{ loginError }}
-            </div>
-
-            <div class="mb-3">
-              <label for="companySlug" class="form-label">Slug Instansi</label>
-              <input
-                id="companySlug"
-                v-model="form.company_slug"
-                type="text"
-                class="form-control"
-                placeholder="instansi-demo"
-                required
-              />
             </div>
 
             <div class="mb-3">
@@ -129,6 +117,7 @@ async function submitLogin() {
                 class="spinner-border spinner-border-sm me-2"
                 aria-hidden="true"
               ></span>
+              <i v-else class="bi bi-box-arrow-in-right me-2"></i>
               {{ isSubmitting ? 'Memproses...' : 'Masuk ke Dashboard' }}
             </button>
           </form>

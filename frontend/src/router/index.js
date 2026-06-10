@@ -16,6 +16,16 @@ const router = createRouter({
       component: () => import('@/views/AdminDashboard.vue'),
     },
     {
+      path: '/admin/guest-visits',
+      name: 'admin-guest-visits',
+      component: () => import('@/views/AdminGuestVisits.vue'),
+    },
+    {
+      path: '/admin/guest-visits/:formId',
+      name: 'admin-guest-visit-detail',
+      component: () => import('@/views/AdminGuestVisitDetail.vue'),
+    },
+    {
       path: '/admin/guest-forms',
       name: 'admin-guest-forms',
       component: () => import('@/views/AdminGuestForms.vue'),
@@ -46,13 +56,15 @@ function readStoredAuth() {
 }
 
 router.beforeEach((to) => {
-  if (!to.meta.requiredRole) {
-    return true
+  const isAdminRoute = to.path.startsWith('/admin') && to.name !== 'admin-login'
+  const auth = readStoredAuth()
+
+  if (isAdminRoute && !auth?.token) {
+    return { name: 'admin-login' }
   }
 
-  const auth = readStoredAuth()
-  if (!auth?.token) {
-    return { name: 'admin-login' }
+  if (!to.meta.requiredRole) {
+    return true
   }
 
   if (auth.user?.role !== to.meta.requiredRole) {
