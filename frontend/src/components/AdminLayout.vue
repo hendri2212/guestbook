@@ -75,10 +75,6 @@ defineEmits(['logout'])
       <div class="sidebar-footer mt-auto">
         <p class="small text-secondary mb-1">Instansi</p>
         <p class="fw-semibold mb-3">{{ company?.name || 'Memuat...' }}</p>
-        <button type="button" class="btn btn-outline-secondary w-100" @click="$emit('logout')">
-          <i class="bi bi-box-arrow-right me-2"></i>
-          Keluar
-        </button>
       </div>
     </aside>
 

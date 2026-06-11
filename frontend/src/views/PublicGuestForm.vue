@@ -230,7 +230,7 @@ onMounted(loadGuestForm)
           </div>
 
           <div v-else-if="canShowForm" class="row g-4 align-items-stretch">
-            <div class="col-12 col-lg-5">
+            <div class="col-12 col-lg-5 intro-column">
               <div class="intro-panel h-100">
                 <p class="text-uppercase small fw-semibold text-primary mb-3">Check-in tamu</p>
                 <h2 class="display-title mb-3">Silakan lengkapi data kunjungan Anda.</h2>
@@ -255,11 +255,6 @@ onMounted(loadGuestForm)
                     </div>
                   </div>
                 </div>
-
-                <div class="slug-box mt-4">
-                  <span class="text-secondary small d-block mb-1">Kode form aktif</span>
-                  <code>{{ publicSlug }}</code>
-                </div>
               </div>
             </div>
 
@@ -279,63 +274,83 @@ onMounted(loadGuestForm)
 
                 <div class="row g-3">
                   <div class="col-12">
-                    <label for="guestName" class="form-label">Nama Lengkap *</label>
-                    <input id="guestName" v-model="form.guest_name" type="text" class="form-control form-control-lg"
-                      placeholder="Masukkan nama lengkap" maxlength="140" required />
+                    <div class="form-floating">
+                      <input id="guestName" v-model="form.guest_name" type="text" class="form-control"
+                        placeholder="Masukkan nama lengkap" maxlength="140" required />
+                      <label for="guestName">Nama Lengkap *</label>
+                    </div>
                   </div>
 
                   <div v-if="enabledFields.email" class="col-12 col-md-6">
-                    <label for="guestEmail" class="form-label">Email</label>
-                    <input id="guestEmail" v-model="form.guest_email" type="email" class="form-control"
-                      placeholder="nama@email.com" maxlength="160" />
+                    <div class="form-floating">
+                      <input id="guestEmail" v-model="form.guest_email" type="email" class="form-control"
+                        placeholder="nama@email.com" maxlength="160" />
+                      <label for="guestEmail">Email</label>
+                    </div>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label for="guestPhone" class="form-label">Nomor Telepon *</label>
-                    <input id="guestPhone" v-model="form.guest_phone" type="tel" class="form-control"
-                      placeholder="08xxxxxxxxxx" maxlength="40" required />
+                    <div class="form-floating">
+                      <input id="guestPhone" v-model="form.guest_phone" type="tel" class="form-control"
+                        placeholder="08xxxxxxxxxx" maxlength="40" required />
+                      <label for="guestPhone">Nomor Telepon *</label>
+                    </div>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label for="guestCompany" class="form-label">Asal Instansi / Perusahaan</label>
-                    <input id="guestCompany" v-model="form.guest_company" type="text" class="form-control"
-                      placeholder="Nama instansi" maxlength="160" />
+                    <div class="form-floating">
+                      <input id="guestCompany" v-model="form.guest_company" type="text" class="form-control"
+                        placeholder="Nama instansi" maxlength="160" />
+                      <label for="guestCompany">Asal Instansi / Perusahaan</label>
+                    </div>
                   </div>
 
                   <div v-if="enabledFields.personToMeet" class="col-12 col-md-6">
-                    <label for="personToMeet" class="form-label">Bertemu Dengan</label>
-                    <input id="personToMeet" v-model="form.person_to_meet" type="text" class="form-control"
-                      placeholder="Nama penerima" maxlength="140" />
+                    <div class="form-floating">
+                      <input id="personToMeet" v-model="form.person_to_meet" type="text" class="form-control"
+                        placeholder="Nama penerima" maxlength="140" />
+                      <label for="personToMeet">Bertemu Dengan</label>
+                    </div>
                   </div>
 
                   <div v-if="enabledFields.identityNumber" class="col-12 col-md-6">
-                    <label for="identityNumber" class="form-label">Nomor Identitas</label>
-                    <input id="identityNumber" v-model="form.identity_number" type="text" class="form-control"
-                      placeholder="KTP/SIM/Paspor" />
+                    <div class="form-floating">
+                      <input id="identityNumber" v-model="form.identity_number" type="text" class="form-control"
+                        placeholder="KTP/SIM/Paspor" />
+                      <label for="identityNumber">Nomor Identitas</label>
+                    </div>
                   </div>
 
                   <div v-if="enabledFields.department" class="col-12 col-md-6">
-                    <label for="department" class="form-label">Departemen Tujuan</label>
-                    <input id="department" v-model="form.department" type="text" class="form-control"
-                      placeholder="Contoh: Administrasi" />
+                    <div class="form-floating">
+                      <input id="department" v-model="form.department" type="text" class="form-control"
+                        placeholder="Contoh: Administrasi" />
+                      <label for="department">Departemen Tujuan</label>
+                    </div>
                   </div>
 
                   <div v-if="requirePhoto" class="col-12 col-md-6">
-                    <label for="photoUrl" class="form-label">Foto Tamu *</label>
-                    <input id="photoUrl" v-model="form.photo_url" type="url" class="form-control"
-                      placeholder="https://contoh.com/foto.jpg" required />
+                    <div class="form-floating">
+                      <input id="photoUrl" v-model="form.photo_url" type="url" class="form-control"
+                        placeholder="https://contoh.com/foto.jpg" required />
+                      <label for="photoUrl">Foto Tamu *</label>
+                    </div>
                   </div>
 
                   <div v-if="requireSignature" class="col-12 col-md-6">
-                    <label for="signatureUrl" class="form-label">Tanda Tangan *</label>
-                    <input id="signatureUrl" v-model="form.signature_url" type="url" class="form-control"
-                      placeholder="https://contoh.com/signature.png" required />
+                    <div class="form-floating">
+                      <input id="signatureUrl" v-model="form.signature_url" type="url" class="form-control"
+                        placeholder="https://contoh.com/signature.png" required />
+                      <label for="signatureUrl">Tanda Tangan *</label>
+                    </div>
                   </div>
 
                   <div class="col-12">
-                    <label for="purpose" class="form-label">Keperluan *</label>
-                    <textarea id="purpose" v-model="form.purpose" class="form-control" rows="4"
-                      placeholder="Jelaskan tujuan kunjungan" required></textarea>
+                    <div class="form-floating">
+                      <textarea id="purpose" v-model="form.purpose" class="form-control purpose-field"
+                        placeholder="Jelaskan tujuan kunjungan" required></textarea>
+                      <label for="purpose">Keperluan *</label>
+                    </div>
                   </div>
                 </div>
 
@@ -353,15 +368,8 @@ onMounted(loadGuestForm)
       </div>
     </section>
 
-    <div
-      v-if="isSuccessModalOpen"
-      class="modal fade show thank-you-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="thankYouTitle"
-      tabindex="-1"
-      @click.self="closeSuccessModal"
-    >
+    <div v-if="isSuccessModalOpen" class="modal fade show thank-you-modal" role="dialog" aria-modal="true"
+      aria-labelledby="thankYouTitle" tabindex="-1" @click.self="closeSuccessModal">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-body text-center p-4 p-md-5">
@@ -473,31 +481,18 @@ onMounted(loadGuestForm)
   font-weight: 800;
 }
 
-.slug-box {
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 14px 16px;
-}
-
-.slug-box code {
-  color: #334155;
-  overflow-wrap: anywhere;
-}
-
-.form-label {
-  color: #334155;
-  font-weight: 650;
-}
-
 .form-control {
   border-color: #dbe3ef;
   border-radius: 12px;
-  padding: 0.76rem 0.9rem;
 }
 
 .form-control:focus {
   border-color: #86b7fe;
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.12);
+}
+
+.purpose-field {
+  min-height: 130px;
 }
 
 .btn {
@@ -526,6 +521,12 @@ onMounted(loadGuestForm)
   }
 
   .topbar .badge {
+    display: none;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .intro-column {
     display: none;
   }
 }
