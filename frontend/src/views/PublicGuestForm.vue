@@ -148,6 +148,8 @@ async function submitGuestVisit() {
 
     submitResult.value = data
     isSuccessModalOpen.value = true
+    // Kirim notifikasi WhatsApp ke tamu (fire-and-forget)
+    sendWhatsAppNotification(form.guest_name, form.guest_phone)
     resetForm()
   } catch (error) {
     submitError.value = error.message || 'Terjadi kesalahan saat mengirim data.'
@@ -159,6 +161,44 @@ async function submitGuestVisit() {
 function closeSuccessModal() {
   isSuccessModalOpen.value = false
   submitResult.value = null
+}
+
+const WA_BOT_URL = 'https://wabot.tukarjual.com/send'
+
+function formatPhoneToWA(phone) {
+  // Hapus spasi, tanda hubung, kurung
+  let cleaned = phone.replace(/[\s\-().]/g, '')
+  // Ubah awalan 0 menjadi 62
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.slice(1)
+  }
+  // Jika belum diawali 62 atau +62, tambahkan 62
+  if (!cleaned.startsWith('62') && !cleaned.startsWith('+62')) {
+    cleaned = '62' + cleaned
+  }
+  // Hapus tanda + jika ada
+  cleaned = cleaned.replace(/^\+/, '')
+  return cleaned
+}
+
+async function sendWhatsAppNotification(guestName, guestPhone) {
+  if (!guestPhone) return
+
+  const to = formatPhoneToWA(guestPhone)
+  const message =
+    `Halo ${guestName}! 👋\n\n` +
+    `Terima kasih telah mengisi buku tamu kami. Data kunjungan Anda telah berhasil tercatat.\n\n` +
+    `Silakan menunggu arahan dari petugas. Selamat datang! 🙏`
+
+  try {
+    await fetch(WA_BOT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, message }),
+    })
+  } catch {
+    // Kegagalan pengiriman WA tidak mempengaruhi alur utama
+  }
 }
 
 async function loadGuestForm() {
