@@ -1,8 +1,8 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { API_BASE_URL } from '@/config/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 const DEFAULT_COMPANY_SLUG = import.meta.env.VITE_COMPANY_SLUG || 'instansi-demo'
 const AUTH_STORAGE_KEY = 'guestbook_admin_auth'
 

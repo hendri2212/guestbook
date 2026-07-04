@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+import { API_BASE_URL } from '@/config/api'
 
 const publicSlug = computed(() => {
   const segments = window.location.pathname.split('/').filter(Boolean)

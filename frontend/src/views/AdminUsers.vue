@@ -2,8 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/AdminLayout.vue'
+import { API_BASE_URL } from '@/config/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 const AUTH_STORAGE_KEY = 'guestbook_admin_auth'
 const roleOptions = [
   { value: 'owner', label: 'Owner' },
