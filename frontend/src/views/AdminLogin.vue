@@ -11,7 +11,7 @@ const isSubmitting = ref(false)
 const loginError = ref('')
 
 const form = reactive({
-  email: 'admin@instansi-demo.test',
+  email: '',
   password: '',
 })
 
@@ -93,7 +93,7 @@ async function submitLogin() {
                 v-model="form.email"
                 type="email"
                 class="form-control"
-                placeholder="admin@instansi-demo.test"
+                placeholder="nama@instansi.sch.id"
                 required
               />
             </div>
