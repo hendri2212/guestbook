@@ -506,8 +506,8 @@ onMounted(loadGuestVisits)
                 <thead>
                   <tr>
                     <th>Tamu</th>
-                    <th>Form</th>
-                    <th>Check-in</th>
+                    <th>Instansi</th>
+                    <th>Keperluan</th>
                     <th class="text-end">Aksi</th>
                   </tr>
                 </thead>
@@ -517,8 +517,8 @@ onMounted(loadGuestVisits)
                       <p class="fw-semibold mb-1">{{ visit.guest_name }}</p>
                       <p class="small text-secondary mb-0">{{ visit.guest_phone }}</p>
                     </td>
-                    <td>{{ visit.form?.title || '-' }}</td>
-                    <td>{{ formatDateTime(visit.check_in_at) }}</td>
+                    <td>{{ visit.guest_company || '-' }}</td>
+                    <td class="visit-purpose">{{ visit.purpose || '-' }}</td>
                     <td class="text-end">
                       <div class="d-inline-flex gap-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" title="Lihat detail"
@@ -779,6 +779,11 @@ onMounted(loadGuestVisits)
   color: #64748b;
   font-size: 0.78rem;
   text-transform: uppercase;
+}
+
+.visit-purpose {
+  max-width: 240px;
+  white-space: normal;
 }
 
 .form-label {

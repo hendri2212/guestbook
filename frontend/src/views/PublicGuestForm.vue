@@ -148,7 +148,13 @@ async function submitGuestVisit() {
     submitResult.value = data
     isSuccessModalOpen.value = true
     // Kirim notifikasi WhatsApp ke tamu (fire-and-forget)
-    sendWhatsAppNotification(form.guest_name, form.guest_phone)
+    sendWhatsAppNotification({
+      guestName: payload.guest_name,
+      guestPhone: payload.guest_phone,
+      guestCompany: payload.guest_company,
+      purpose: payload.purpose,
+      formTitle: guestForm.value?.title,
+    })
     resetForm()
   } catch (error) {
     submitError.value = error.message || 'Terjadi kesalahan saat mengirim data.'
@@ -180,14 +186,24 @@ function formatPhoneToWA(phone) {
   return cleaned
 }
 
-async function sendWhatsAppNotification(guestName, guestPhone) {
+function buildWhatsAppMessage({ guestName, guestCompany, purpose, formTitle }) {
+  const title = formTitle?.trim() || 'buku tamu kami'
+  const companyInfo = guestCompany ? ` dari ${guestCompany}` : ''
+  const purposeInfo = purpose ? ` dengan tujuan ${purpose}` : ''
+
+  return (
+    `Halo ${guestName}! 👋\n\n` +
+    `Terima kasih telah mengisi ${title}.\n\n` +
+    `Data kunjungan Anda${companyInfo}${purposeInfo} telah berhasil tercatat.\n\n` +
+    `Silakan menunggu arahan dari petugas. Selamat datang! 🙏`
+  )
+}
+
+async function sendWhatsAppNotification({ guestName, guestPhone, guestCompany, purpose, formTitle }) {
   if (!guestPhone) return
 
   const to = formatPhoneToWA(guestPhone)
-  const message =
-    `Halo ${guestName}! 👋\n\n` +
-    `Terima kasih telah mengisi buku tamu kami. Data kunjungan Anda telah berhasil tercatat.\n\n` +
-    `Silakan menunggu arahan dari petugas. Selamat datang! 🙏`
+  const message = buildWhatsAppMessage({ guestName, guestCompany, purpose, formTitle })
 
   try {
     await fetch(WA_BOT_URL, {
